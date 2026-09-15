@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM & Калькулятор 3D-печати</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding-top: 20px; }
+        .kanban-board { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; }
+        .kanban-column { min-width: 300px; background: #f8f9fa; border-radius: 5px; padding: 15px; }
+        .kanban-card { background: white; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .kanban-column h4 { text-align: center; margin-bottom: 15px; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="mb-4">Управление 3D-печатью</h1>
+
+    <!-- Nav tabs -->
+    <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="kanban-tab" data-bs-toggle="tab" data-bs-target="#kanban" type="button" role="tab" aria-controls="kanban" aria-selected="true">Канбан-доска</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="calculator-tab" data-bs-toggle="tab" data-bs-target="#calculator" type="button" role="tab" aria-controls="calculator" aria-selected="false">Калькулятор</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="materials-tab" data-bs-toggle="tab" data-bs-target="#materials" type="button" role="tab" aria-controls="materials" aria-selected="false">Склад (Материалы)</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="printers-tab" data-bs-toggle="tab" data-bs-target="#printers" type="button" role="tab" aria-controls="printers" aria-selected="false">Принтеры</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab" aria-controls="settings" aria-selected="false">Настройки</button>
+        </li>
+    </ul>
+
+    <!-- Tab panes -->
+    <div class="tab-content" id="myTabContent">
+        <!-- Kanban Tab -->
+        <div class="tab-pane fade show active" id="kanban" role="tabpanel" aria-labelledby="kanban-tab">
+            <div class="kanban-board" id="kanban-container">
+                <div class="kanban-column" id="col-Согласование">
+                    <h4>Согласование</h4>
+                    <div class="cards-container"></div>
+                </div>
+                <div class="kanban-column" id="col-Очередь">
+                    <h4>Очередь</h4>
+                    <div class="cards-container"></div>
+                </div>
+                <div class="kanban-column" id="col-В работе">
+                    <h4>В работе</h4>
+                    <div class="cards-container"></div>
+                </div>
+                <div class="kanban-column" id="col-Готов">
+                    <h4>Готов</h4>
+                    <div class="cards-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Other tabs will be added later -->
+        <div class="tab-pane fade" id="calculator" role="tabpanel" aria-labelledby="calculator-tab">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">Параметры печати</div>
+                        <div class="card-body">
+                            <form id="calculator-form">
+                                <div class="mb-3">
+                                    <label class="form-label">Материал</label>
+                                    <select class="form-select" id="calc-material" required></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Принтер</label>
+                                    <select class="form-select" id="calc-printer" required></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Вес детали (г/мл)</label>
+                                    <input type="number" class="form-control" id="calc-weight" required step="0.1" min="0">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Время печати (часы)</label>
+                                    <input type="number" class="form-control" id="calc-hours" required step="0.1" min="0">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Сложность моделирования</label>
+                                    <select class="form-select" id="calc-complexity">
+                                        <option value="none">Без моделирования (0 руб.)</option>
+                                        <option value="simple">Простая (от 500 руб.)</option>
+                                        <option value="medium">Средняя/Механика (от 1500 руб.)</option>
+                                        <option value="complex">Сложная/Органика (от 3000 руб.)</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary" onclick="calculateCost()">Рассчитать</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Результат</div>
+                        <div class="card-body">
+                            <h5 class="card-title">Итоговая стоимость: <span id="res-total">0</span> ₽</h5>
+                            <p class="card-text text-muted">Себестоимость: <span id="res-self">0</span> ₽</p>
+                            <hr>
+                            <p class="mb-1 small">Материал: <span id="res-mat">0</span> ₽</p>
+                            <p class="mb-1 small">Электроэнергия: <span id="res-elec">0</span> ₽</p>
+                            <p class="mb-1 small">Амортизация: <span id="res-amort">0</span> ₽</p>
+                            <p class="mb-3 small">Моделирование: <span id="res-mod">0</span> ₽</p>
+
+                            <h6>Создать заказ</h6>
+                            <form id="create-order-form">
+                                <div class="mb-3">
+                                    <input type="text" class="form-control" id="order-name" placeholder="Название заказа" required>
+                                </div>
+                                <div class="mb-3">
+                                    <textarea class="form-control" id="order-desc" placeholder="Описание"></textarea>
+                                </div>
+                                <button type="button" class="btn btn-success w-100" onclick="createOrderFromCalc()">Сохранить заказ</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="materials" role="tabpanel" aria-labelledby="materials-tab">
+            <div class="card mb-4">
+                <div class="card-header">Добавить материал</div>
+                <div class="card-body">
+                    <form id="add-material-form" class="row g-3">
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" id="mat-name" placeholder="Название" required>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="mat-type" required>
+                                <option value="FDM">FDM</option>
+                                <option value="SLA">SLA</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control" id="mat-wv" placeholder="Вес/Объем (г/мл)" required step="0.1">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control" id="mat-price" placeholder="Цена (₽)" required step="0.1">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control" id="mat-stock" placeholder="Остаток" required step="0.1">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-primary w-100" onclick="addMaterial()">+</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Тип</th>
+                        <th>Вес/Объем</th>
+                        <th>Цена</th>
+                        <th>Остаток</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="materials-table-body"></tbody>
+            </table>
+        </div>
+        <div class="tab-pane fade" id="printers" role="tabpanel" aria-labelledby="printers-tab">
+            <div class="card mb-4">
+                <div class="card-header">Добавить принтер</div>
+                <div class="card-body">
+                    <form id="add-printer-form" class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="prin-name" placeholder="Название" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control" id="prin-power" placeholder="Мощность (Вт)" required step="0.1">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="number" class="form-control" id="prin-cost" placeholder="Стоимость (₽)" required step="0.1">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control" id="prin-res" placeholder="Ресурс (часы)" required step="0.1">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-primary w-100" onclick="addPrinter()">+</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Мощность (Вт)</th>
+                        <th>Стоимость (₽)</th>
+                        <th>Ресурс (ч)</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="printers-table-body"></tbody>
+            </table>
+        </div>
+        <div class="tab-pane fade" id="settings" role="tabpanel" aria-labelledby="settings-tab">
+            <div class="card" style="max-width: 400px;">
+                <div class="card-header">Общие настройки</div>
+                <div class="card-body">
+                    <form id="settings-form">
+                        <div class="mb-3">
+                            <label class="form-label">Тариф электроэнергии (₽/кВт*ч)</label>
+                            <input type="number" class="form-control" id="set-elec" step="0.1" required>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    let currentCalcResult = null;
+    let materialsList = [];
+    let printersList = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadOrders();
+        loadSelects();
+        loadMaterialsTable();
+        loadPrintersTable();
+        loadSettings();
+
+        // Listen for tab changes to reload data
+        document.getElementById('materials-tab').addEventListener('shown.bs.tab', loadMaterialsTable);
+        document.getElementById('printers-tab').addEventListener('shown.bs.tab', loadPrintersTable);
+        document.getElementById('calculator-tab').addEventListener('shown.bs.tab', loadSelects);
+    });
+
+    async function loadSelects() {
+        try {
+            const [matRes, prinRes] = await Promise.all([
+                fetch('/api/materials'),
+                fetch('/api/printers')
+            ]);
+            materialsList = await matRes.json();
+            printersList = await prinRes.json();
+
+            updateSelects();
+        } catch (error) {
+            console.error('Error loading selects:', error);
+        }
+    }
+
+    function updateSelects() {
+        const matSelect = document.getElementById('calc-material');
+        matSelect.innerHTML = materialsList.map(m => `<option value="${m.id}">${m.name} (${m.type}) - ${m.price}₽/${m.weight_volume}</option>`).join('');
+
+        const prinSelect = document.getElementById('calc-printer');
+        prinSelect.innerHTML = printersList.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    }
+
+    async function calculateCost() {
+        const material_id = document.getElementById('calc-material').value;
+        const printer_id = document.getElementById('calc-printer').value;
+        const weight = document.getElementById('calc-weight').value;
+        const hours = document.getElementById('calc-hours').value;
+        const complexity = document.getElementById('calc-complexity').value;
+
+        if (!material_id || !printer_id || !weight || !hours) {
+            alert('Пожалуйста, заполните все обязательные поля.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    material_id,
+                    printer_id,
+                    weight,
+                    hours,
+                    modeling_complexity: complexity
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                currentCalcResult = data;
+                document.getElementById('res-total').textContent = data.total_price.toFixed(2);
+                document.getElementById('res-self').textContent = data.self_cost.toFixed(2);
+                document.getElementById('res-mat').textContent = data.material_cost.toFixed(2);
+                document.getElementById('res-elec').textContent = data.electricity_cost.toFixed(2);
+                document.getElementById('res-amort').textContent = data.amortization_cost.toFixed(2);
+                document.getElementById('res-mod').textContent = data.modeling_cost.toFixed(2);
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        } catch (error) {
+            console.error('Error calculating cost:', error);
+        }
+    }
+
+    async function createOrderFromCalc() {
+        if (!currentCalcResult) {
+            alert('Сначала рассчитайте стоимость!');
+            return;
+        }
+
+        const name = document.getElementById('order-name').value;
+        const desc = document.getElementById('order-desc').value;
+        const material_id = document.getElementById('calc-material').value;
+        const weight_used = document.getElementById('calc-weight').value;
+
+        if (!name) {
+            alert('Введите название заказа.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    description: desc,
+                    status: 'Согласование',
+                    price: currentCalcResult.total_price,
+                    cost: currentCalcResult.self_cost,
+                    material_id: material_id,
+                    weight_used: weight_used
+                })
+            });
+
+            if (res.ok) {
+                alert('Заказ успешно создан!');
+                document.getElementById('order-name').value = '';
+                document.getElementById('order-desc').value = '';
+                loadOrders(); // Refresh kanban
+                // Switch to kanban tab
+                const triggerEl = document.querySelector('#kanban-tab');
+                bootstrap.Tab.getInstance(triggerEl).show();
+            }
+        } catch (error) {
+            console.error('Error creating order:', error);
+        }
+    }
+
+    async function loadOrders() {
+        try {
+            const res = await fetch('/api/orders');
+            const orders = await res.json();
+            renderKanban(orders);
+        } catch (error) {
+            console.error('Error loading orders:', error);
+        }
+    }
+
+    function renderKanban(orders) {
+        // Clear all columns
+        document.querySelectorAll('.kanban-column .cards-container').forEach(el => el.innerHTML = '');
+
+        orders.forEach(order => {
+            const card = document.createElement('div');
+            card.className = 'kanban-card';
+            card.innerHTML = `
+                <h5>${order.name}</h5>
+                <p class="text-muted small mb-2">${order.description || ''}</p>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="badge bg-secondary">Себестоимость: ${order.cost.toFixed(2)}₽</span>
+                    <span class="badge bg-success">Цена: ${order.price.toFixed(2)}₽</span>
+                </div>
+                <div class="btn-group w-100" role="group">
+                    <select class="form-select form-select-sm" onchange="updateOrderStatus(${order.id}, this.value)">
+                        <option value="Согласование" ${order.status === 'Согласование' ? 'selected' : ''}>Согласование</option>
+                        <option value="Очередь" ${order.status === 'Очередь' ? 'selected' : ''}>Очередь</option>
+                        <option value="В работе" ${order.status === 'В работе' ? 'selected' : ''}>В работе</option>
+                        <option value="Готов" ${order.status === 'Готов' ? 'selected' : ''}>Готов</option>
+                    </select>
+                </div>
+                <button class="btn btn-sm btn-danger w-100 mt-2" onclick="deleteOrder(${order.id})">Удалить</button>
+            `;
+            const col = document.getElementById(`col-${order.status}`);
+            if (col) {
+                col.querySelector('.cards-container').appendChild(card);
+            }
+        });
+    }
+
+    async function updateOrderStatus(id, newStatus) {
+        try {
+            const res = await fetch(`/api/orders/${id}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) {
+                loadOrders(); // Reload orders to update UI and potentially materials if status changed to "Готов"
+                // Trigger a reload of materials table in case status was set to "Готов"
+                loadMaterialsTable();
+            }
+        } catch (error) {
+            console.error('Error updating order status:', error);
+        }
+    }
+
+    // --- Materials Logic ---
+    async function loadMaterialsTable() {
+        try {
+            const res = await fetch('/api/materials');
+            const data = await res.json();
+            const tbody = document.getElementById('materials-table-body');
+            tbody.innerHTML = data.map(m => `
+                <tr>
+                    <td>${m.name}</td>
+                    <td>${m.type}</td>
+                    <td>${m.weight_volume}</td>
+                    <td>${m.price}</td>
+                    <td>${m.stock}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteMaterial(${m.id})">Удалить</button>
+                    </td>
+                </tr>
+            `).join('');
+            materialsList = data; // Keep lists in sync
+        } catch(e) { console.error(e); }
+    }
+
+    async function addMaterial() {
+        const payload = {
+            name: document.getElementById('mat-name').value,
+            type: document.getElementById('mat-type').value,
+            weight_volume: document.getElementById('mat-wv').value,
+            price: document.getElementById('mat-price').value,
+            stock: document.getElementById('mat-stock').value
+        };
+        try {
+            await fetch('/api/materials', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(payload)
+            });
+            loadMaterialsTable();
+            document.getElementById('add-material-form').reset();
+        } catch(e) { console.error(e); }
+    }
+
+    async function deleteMaterial(id) {
+        if(confirm('Удалить материал?')) {
+            await fetch(`/api/materials/${id}`, { method: 'DELETE' });
+            loadMaterialsTable();
+        }
+    }
+
+    // --- Printers Logic ---
+    async function loadPrintersTable() {
+        try {
+            const res = await fetch('/api/printers');
+            const data = await res.json();
+            const tbody = document.getElementById('printers-table-body');
+            tbody.innerHTML = data.map(p => `
+                <tr>
+                    <td>${p.name}</td>
+                    <td>${p.power}</td>
+                    <td>${p.cost}</td>
+                    <td>${p.resource}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deletePrinter(${p.id})">Удалить</button>
+                    </td>
+                </tr>
+            `).join('');
+            printersList = data; // Keep lists in sync
+        } catch(e) { console.error(e); }
+    }
+
+    async function addPrinter() {
+        const payload = {
+            name: document.getElementById('prin-name').value,
+            power: document.getElementById('prin-power').value,
+            cost: document.getElementById('prin-cost').value,
+            resource: document.getElementById('prin-res').value
+        };
+        try {
+            await fetch('/api/printers', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(payload)
+            });
+            loadPrintersTable();
+            document.getElementById('add-printer-form').reset();
+        } catch(e) { console.error(e); }
+    }
+
+    async function deletePrinter(id) {
+        if(confirm('Удалить принтер?')) {
+            await fetch(`/api/printers/${id}`, { method: 'DELETE' });
+            loadPrintersTable();
+        }
+    }
+
+    // --- Settings Logic ---
+    async function loadSettings() {
+        try {
+            const res = await fetch('/api/settings');
+            const data = await res.json();
+            document.getElementById('set-elec').value = data.electricity_rate;
+        } catch(e) { console.error(e); }
+    }
+
+    async function saveSettings() {
+        const rate = document.getElementById('set-elec').value;
+        try {
+            const res = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ electricity_rate: rate })
+            });
+            if(res.ok) alert('Настройки сохранены');
+        } catch(e) { console.error(e); }
+    }
+
+    async function deleteOrder(id) {
+        if(confirm('Вы уверены, что хотите удалить заказ?')) {
+            try {
+                const res = await fetch(`/api/orders/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadOrders();
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+    }
+</script>
+
+</body>
+</html>
