@@ -3,4 +3,4 @@ __pycache__/
 *.pyc
 app_output.log
 instance/
-database.db
+database.dbuploads/

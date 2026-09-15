@@ -79,11 +79,15 @@
                                     <select class="form-select" id="calc-printer" required></select>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Вес детали (г/мл)</label>
+                                    <label class="form-label">Вес 1 детали (г/мл)</label>
                                     <input type="number" class="form-control" id="calc-weight" required step="0.1" min="0">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Время печати</label>
+                                    <label class="form-label">Количество (шт.)</label>
+                                    <input type="number" class="form-control" id="calc-quantity" value="1" required min="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Время печати (1 шт.)</label>
                                     <div class="input-group">
                                         <input type="number" class="form-control" id="calc-hours" placeholder="Часы" required min="0">
                                         <span class="input-group-text">ч</span>
@@ -130,6 +134,10 @@
                                 </div>
                                 <div class="mb-3">
                                     <textarea class="form-control" id="order-desc" placeholder="Описание"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Файл модели (опционально)</label>
+                                    <input type="file" class="form-control" id="order-file" accept=".stl,.step,.stp,.obj,.zip">
                                 </div>
                                 <button type="button" class="btn btn-success w-100" onclick="createOrderFromCalc()">Сохранить заказ</button>
                             </form>
@@ -322,6 +330,7 @@
         const weight = document.getElementById('calc-weight').value;
         const hours = document.getElementById('calc-hours').value || 0;
         const minutes = document.getElementById('calc-minutes').value || 0;
+        const quantity = document.getElementById('calc-quantity').value || 1;
         const complexity = document.getElementById('calc-complexity').value;
 
         if (!material_id || !printer_id || !weight || (hours === 0 && minutes === 0)) {
@@ -339,6 +348,7 @@
                     weight,
                     hours,
                     minutes,
+                    quantity,
                     modeling_complexity: complexity
                 })
             });
@@ -375,36 +385,44 @@
         const material_id = document.getElementById('calc-material').value;
         const printer_id = document.getElementById('calc-printer').value;
         const weight_used = document.getElementById('calc-weight').value;
+        const quantity = document.getElementById('calc-quantity').value;
         const hours = parseFloat(document.getElementById('calc-hours').value || 0);
         const minutes = parseFloat(document.getElementById('calc-minutes').value || 0);
         const total_hours = hours + (minutes / 60.0);
+        const fileInput = document.getElementById('order-file');
 
         if (!name) {
             alert('Введите название заказа.');
             return;
         }
 
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('description', desc);
+        formData.append('status', 'Согласование');
+        formData.append('price', currentCalcResult.total_price);
+        formData.append('cost', currentCalcResult.self_cost);
+        formData.append('material_id', material_id);
+        formData.append('weight_used', weight_used);
+        formData.append('printer_id', printer_id);
+        formData.append('print_hours', total_hours);
+        formData.append('quantity', quantity);
+
+        if (fileInput.files.length > 0) {
+            formData.append('file', fileInput.files[0]);
+        }
+
         try {
             const res = await fetch('/api/orders', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name,
-                    description: desc,
-                    status: 'Согласование',
-                    price: currentCalcResult.total_price,
-                    cost: currentCalcResult.self_cost,
-                    material_id: material_id,
-                    weight_used: weight_used,
-                    printer_id: printer_id,
-                    print_hours: total_hours
-                })
+                body: formData
             });
 
             if (res.ok) {
                 alert('Заказ успешно создан!');
                 document.getElementById('order-name').value = '';
                 document.getElementById('order-desc').value = '';
+                fileInput.value = '';
                 loadOrders(); // Refresh kanban
                 // Switch to kanban tab
                 const triggerEl = document.querySelector('#kanban-tab');
@@ -451,11 +469,17 @@
                 waitBadge = `<span class="badge bg-warning text-dark d-block mb-2">Ожидание принтера: ~${activePrintersWorkload[order.printer_id].toFixed(1)} ч.</span>`;
             }
 
+            let fileLink = '';
+            if (order.file_path) {
+                fileLink = `<a href="/uploads/${order.file_path}" target="_blank" class="btn btn-sm btn-outline-secondary w-100 mb-2">💾 Скачать файл</a>`;
+            }
+
             card.innerHTML = `
-                <h5>${order.name}</h5>
+                <h5>${order.name} <span class="badge bg-info">${order.quantity} шт.</span></h5>
                 <p class="text-muted small mb-2">${order.description || ''}</p>
                 ${printerInfo}
                 ${waitBadge}
+                ${fileLink}
                 <div class="d-flex justify-content-between mb-2">
                     <span class="badge bg-secondary">Себест: ${order.cost.toFixed(2)}₽</span>
                     <span class="badge bg-success">Цена: ${order.price.toFixed(2)}₽</span>

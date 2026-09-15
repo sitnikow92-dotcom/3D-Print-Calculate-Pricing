@@ -1,18 +1,25 @@
 import os
 import sys
-from flask import Flask, render_template, request, jsonify
+from werkzeug.utils import secure_filename
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 
 if getattr(sys, 'frozen', False):
     template_folder = os.path.join(sys._MEIPASS, 'templates')
     db_path = os.path.join(os.path.dirname(sys.executable), 'database.db')
+    upload_folder = os.path.join(os.path.dirname(sys.executable), 'uploads')
 else:
     template_folder = 'templates'
     db_path = 'database.db'
+    upload_folder = 'uploads'
+
+if not os.path.exists(upload_folder):
+    os.makedirs(upload_folder)
 
 app = Flask(__name__, template_folder=template_folder)
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = upload_folder
 
 db = SQLAlchemy(app)
 
@@ -61,6 +68,8 @@ class Order(db.Model):
     weight_used = db.Column(db.Float, nullable=True) # Weight or volume used
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable=True)
     print_hours = db.Column(db.Float, default=0.0)
+    quantity = db.Column(db.Integer, default=1)
+    file_path = db.Column(db.String(255), nullable=True)
 
     def to_dict(self):
         printer_name = None
@@ -80,7 +89,9 @@ class Order(db.Model):
             'weight_used': self.weight_used,
             'printer_id': self.printer_id,
             'print_hours': self.print_hours,
-            'printer_name': printer_name
+            'printer_name': printer_name,
+            'quantity': self.quantity,
+            'file_path': self.file_path
         }
 
 class Settings(db.Model):
@@ -183,21 +194,37 @@ def get_orders():
 
 @app.route('/api/orders', methods=['POST'])
 def add_order():
-    data = request.json
+    data = request.form
+
+    file_path = None
+    if 'file' in request.files:
+        file = request.files['file']
+        if file.filename != '':
+            filename = secure_filename(file.filename)
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(save_path)
+            file_path = filename
+
     new_order = Order(
         name=data['name'],
         description=data.get('description', ''),
         status=data.get('status', 'Согласование'),
         price=float(data['price']),
         cost=float(data['cost']),
-        material_id=data.get('material_id'),
-        weight_used=data.get('weight_used'),
-        printer_id=data.get('printer_id'),
-        print_hours=float(data.get('print_hours', 0.0))
+        material_id=data.get('material_id') if data.get('material_id') else None,
+        weight_used=data.get('weight_used') if data.get('weight_used') else None,
+        printer_id=data.get('printer_id') if data.get('printer_id') else None,
+        print_hours=float(data.get('print_hours', 0.0)),
+        quantity=int(data.get('quantity', 1)),
+        file_path=file_path
     )
     db.session.add(new_order)
     db.session.commit()
     return jsonify(new_order.to_dict()), 201
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/api/orders/<int:id>', methods=['DELETE'])
 def delete_order(id):
@@ -217,7 +244,7 @@ def update_order_status(id):
         if new_status == "Готов" and order.status != "Готов" and order.material_id and order.weight_used:
             material = Material.query.get(order.material_id)
             if material:
-                material.stock -= order.weight_used
+                material.stock -= (order.weight_used * order.quantity)
                 # Ensure stock doesn't go below 0 for better real-world handling,
                 # although the problem statement just says to deduct.
                 if material.stock < 0:
@@ -237,6 +264,7 @@ def calculate_cost():
         weight = float(data.get('weight', 0))
         hours = float(data.get('hours', 0))
         minutes = float(data.get('minutes', 0))
+        quantity = int(data.get('quantity', 1))
         modeling_complexity = data.get('modeling_complexity') # "none", "simple", "medium", "complex"
 
         material = Material.query.get(material_id)
@@ -249,9 +277,13 @@ def calculate_cost():
         total_hours = hours + (minutes / 60.0)
 
         # Formula: (цена катушки / вес) * вес детали + (мощность / 1000 * часы печати * тариф) + (стоимость принтера / ресурс * часы печати)
-        material_cost = (material.price / material.weight_volume) * weight
-        electricity_cost = (printer.power / 1000.0) * total_hours * settings.electricity_rate
-        amortization_cost = (printer.cost / printer.resource) * total_hours
+        # Apply quantity to material, electricity and amortization
+        total_weight = weight * quantity
+        total_print_hours = total_hours * quantity
+
+        material_cost = (material.price / material.weight_volume) * total_weight
+        electricity_cost = (printer.power / 1000.0) * total_print_hours * settings.electricity_rate
+        amortization_cost = (printer.cost / printer.resource) * total_print_hours
 
         self_cost = material_cost + electricity_cost + amortization_cost
 
@@ -259,6 +291,7 @@ def calculate_cost():
         failure_cost = self_cost * (settings.failure_percent / 100.0)
         client_print_price = self_cost + markup_cost + failure_cost
 
+        # Modeling cost is one-time
         modeling_cost = 0.0
         if modeling_complexity == "simple":
             modeling_cost = 500.0
