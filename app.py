@@ -1,9 +1,17 @@
 import os
+import sys
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+if getattr(sys, 'frozen', False):
+    template_folder = os.path.join(sys._MEIPASS, 'templates')
+    db_path = os.path.join(os.path.dirname(sys.executable), 'database.db')
+else:
+    template_folder = 'templates'
+    db_path = 'database.db'
+
+app = Flask(__name__, template_folder=template_folder)
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
