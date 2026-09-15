@@ -1,5 +1,8 @@
 import os
 import sys
+import threading
+import time
+import webbrowser
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
@@ -444,5 +447,11 @@ def get_waybill(id):
     now = datetime.now().strftime("%d.%m.%Y")
     return render_template('waybill.html', order=order, settings=settings, now=now)
 
+def open_browser():
+    time.sleep(1)
+    webbrowser.open_new('http://127.0.0.1:5000/')
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Start the browser in a separate thread so it doesn't block Flask from starting
+    threading.Thread(target=open_browser, daemon=True).start()
+    app.run(debug=False, port=5000)
