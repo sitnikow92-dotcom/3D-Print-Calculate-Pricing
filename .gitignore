@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+app_output.log
+instance/
+database.db
