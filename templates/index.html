@@ -83,8 +83,13 @@
                                     <input type="number" class="form-control" id="calc-weight" required step="0.1" min="0">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Время печати (часы)</label>
-                                    <input type="number" class="form-control" id="calc-hours" required step="0.1" min="0">
+                                    <label class="form-label">Время печати</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="calc-hours" placeholder="Часы" required min="0">
+                                        <span class="input-group-text">ч</span>
+                                        <input type="number" class="form-control" id="calc-minutes" placeholder="Минуты" required min="0" max="59">
+                                        <span class="input-group-text">м</span>
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Сложность моделирования</label>
@@ -104,13 +109,18 @@
                     <div class="card">
                         <div class="card-header">Результат</div>
                         <div class="card-body">
-                            <h5 class="card-title">Итоговая стоимость: <span id="res-total">0</span> ₽</h5>
-                            <p class="card-text text-muted">Себестоимость: <span id="res-self">0</span> ₽</p>
+                            <h5 class="card-title">Итого (с моделированием): <span id="res-total">0</span> ₽</h5>
+                            <h6 class="card-subtitle mb-2 text-success">Цена печати для клиента: <span id="res-client-print">0</span> ₽</h6>
+                            <p class="card-text text-muted mb-1">Чистая себестоимость: <span id="res-self">0</span> ₽</p>
                             <hr>
-                            <p class="mb-1 small">Материал: <span id="res-mat">0</span> ₽</p>
-                            <p class="mb-1 small">Электроэнергия: <span id="res-elec">0</span> ₽</p>
-                            <p class="mb-1 small">Амортизация: <span id="res-amort">0</span> ₽</p>
-                            <p class="mb-3 small">Моделирование: <span id="res-mod">0</span> ₽</p>
+                            <p class="mb-1 small text-muted"><strong>Себестоимость:</strong></p>
+                            <p class="mb-1 small ms-2">Материал: <span id="res-mat">0</span> ₽</p>
+                            <p class="mb-1 small ms-2">Электроэнергия: <span id="res-elec">0</span> ₽</p>
+                            <p class="mb-3 small ms-2">Амортизация: <span id="res-amort">0</span> ₽</p>
+                            <p class="mb-1 small text-muted"><strong>Дополнительно:</strong></p>
+                            <p class="mb-1 small ms-2">Наценка: <span id="res-markup">0</span> ₽</p>
+                            <p class="mb-1 small ms-2">Резерв на брак: <span id="res-failure">0</span> ₽</p>
+                            <p class="mb-3 small ms-2">Моделирование: <span id="res-mod">0</span> ₽</p>
 
                             <h6>Создать заказ</h6>
                             <form id="create-order-form">
@@ -217,6 +227,14 @@
                             <label class="form-label">Тариф электроэнергии (₽/кВт*ч)</label>
                             <input type="number" class="form-control" id="set-elec" step="0.1" required>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">Наценка на печать (%)</label>
+                            <input type="number" class="form-control" id="set-markup" step="0.1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Процент на брак (%)</label>
+                            <input type="number" class="form-control" id="set-failure" step="0.1" required>
+                        </div>
                         <button type="button" class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
                     </form>
                 </div>
@@ -273,10 +291,11 @@
         const material_id = document.getElementById('calc-material').value;
         const printer_id = document.getElementById('calc-printer').value;
         const weight = document.getElementById('calc-weight').value;
-        const hours = document.getElementById('calc-hours').value;
+        const hours = document.getElementById('calc-hours').value || 0;
+        const minutes = document.getElementById('calc-minutes').value || 0;
         const complexity = document.getElementById('calc-complexity').value;
 
-        if (!material_id || !printer_id || !weight || !hours) {
+        if (!material_id || !printer_id || !weight || (hours === 0 && minutes === 0)) {
             alert('Пожалуйста, заполните все обязательные поля.');
             return;
         }
@@ -290,6 +309,7 @@
                     printer_id,
                     weight,
                     hours,
+                    minutes,
                     modeling_complexity: complexity
                 })
             });
@@ -298,7 +318,10 @@
             if (res.ok) {
                 currentCalcResult = data;
                 document.getElementById('res-total').textContent = data.total_price.toFixed(2);
+                document.getElementById('res-client-print').textContent = data.client_print_price.toFixed(2);
                 document.getElementById('res-self').textContent = data.self_cost.toFixed(2);
+                document.getElementById('res-markup').textContent = data.markup_cost.toFixed(2);
+                document.getElementById('res-failure').textContent = data.failure_cost.toFixed(2);
                 document.getElementById('res-mat').textContent = data.material_cost.toFixed(2);
                 document.getElementById('res-elec').textContent = data.electricity_cost.toFixed(2);
                 document.getElementById('res-amort').textContent = data.amortization_cost.toFixed(2);
@@ -514,16 +537,24 @@
             const res = await fetch('/api/settings');
             const data = await res.json();
             document.getElementById('set-elec').value = data.electricity_rate;
+            document.getElementById('set-markup').value = data.markup_percent;
+            document.getElementById('set-failure').value = data.failure_percent;
         } catch(e) { console.error(e); }
     }
 
     async function saveSettings() {
         const rate = document.getElementById('set-elec').value;
+        const markup = document.getElementById('set-markup').value;
+        const failure = document.getElementById('set-failure').value;
         try {
             const res = await fetch('/api/settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ electricity_rate: rate })
+                body: JSON.stringify({
+                    electricity_rate: rate,
+                    markup_percent: markup,
+                    failure_percent: failure
+                })
             });
             if(res.ok) alert('Настройки сохранены');
         } catch(e) { console.error(e); }

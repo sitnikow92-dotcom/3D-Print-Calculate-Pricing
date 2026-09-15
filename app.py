@@ -67,11 +67,15 @@ class Order(db.Model):
 class Settings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     electricity_rate = db.Column(db.Float, nullable=False, default=5.0)
+    markup_percent = db.Column(db.Float, nullable=False, default=100.0)
+    failure_percent = db.Column(db.Float, nullable=False, default=10.0)
 
     def to_dict(self):
         return {
             'id': self.id,
-            'electricity_rate': self.electricity_rate
+            'electricity_rate': self.electricity_rate,
+            'markup_percent': self.markup_percent,
+            'failure_percent': self.failure_percent
         }
 
 # Initialize database
@@ -79,7 +83,7 @@ with app.app_context():
     db.create_all()
     # Add default setting if not exists
     if not Settings.query.first():
-        default_settings = Settings(electricity_rate=5.0)
+        default_settings = Settings(electricity_rate=5.0, markup_percent=100.0, failure_percent=10.0)
         db.session.add(default_settings)
         db.session.commit()
 
@@ -199,6 +203,7 @@ def calculate_cost():
         printer_id = data.get('printer_id')
         weight = float(data.get('weight', 0))
         hours = float(data.get('hours', 0))
+        minutes = float(data.get('minutes', 0))
         modeling_complexity = data.get('modeling_complexity') # "none", "simple", "medium", "complex"
 
         material = Material.query.get(material_id)
@@ -208,12 +213,18 @@ def calculate_cost():
         if not material or not printer or not settings:
              return jsonify({'error': 'Invalid material, printer, or settings'}), 400
 
+        total_hours = hours + (minutes / 60.0)
+
         # Formula: (цена катушки / вес) * вес детали + (мощность / 1000 * часы печати * тариф) + (стоимость принтера / ресурс * часы печати)
         material_cost = (material.price / material.weight_volume) * weight
-        electricity_cost = (printer.power / 1000.0) * hours * settings.electricity_rate
-        amortization_cost = (printer.cost / printer.resource) * hours
+        electricity_cost = (printer.power / 1000.0) * total_hours * settings.electricity_rate
+        amortization_cost = (printer.cost / printer.resource) * total_hours
 
         self_cost = material_cost + electricity_cost + amortization_cost
+
+        markup_cost = self_cost * (settings.markup_percent / 100.0)
+        failure_cost = self_cost * (settings.failure_percent / 100.0)
+        client_print_price = self_cost + markup_cost + failure_cost
 
         modeling_cost = 0.0
         if modeling_complexity == "simple":
@@ -223,10 +234,13 @@ def calculate_cost():
         elif modeling_complexity == "complex":
             modeling_cost = 3000.0
 
-        total_price = self_cost + modeling_cost
+        total_price = client_print_price + modeling_cost
 
         return jsonify({
             'self_cost': self_cost,
+            'markup_cost': markup_cost,
+            'failure_cost': failure_cost,
+            'client_print_price': client_print_price,
             'modeling_cost': modeling_cost,
             'total_price': total_price,
             'material_cost': material_cost,
@@ -247,7 +261,9 @@ def update_settings():
     data = request.json
     settings = Settings.query.first()
     if settings:
-        settings.electricity_rate = float(data['electricity_rate'])
+        settings.electricity_rate = float(data.get('electricity_rate', settings.electricity_rate))
+        settings.markup_percent = float(data.get('markup_percent', settings.markup_percent))
+        settings.failure_percent = float(data.get('failure_percent', settings.failure_percent))
         db.session.commit()
         return jsonify(settings.to_dict())
     return jsonify({'error': 'Settings not found'}), 404
