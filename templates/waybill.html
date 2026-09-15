@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Товарная накладная № {{ order.order_number }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            color: #000;
+            background-color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .header-table td {
+            padding: 5px;
+            vertical-align: top;
+        }
+
+        .invoice-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 30px 0 20px 0;
+            text-align: center;
+        }
+
+        .items-table th, .items-table td {
+            border: 1px solid #000;
+            padding: 8px;
+        }
+
+        .items-table th {
+            text-align: center;
+        }
+
+        .totals {
+            margin-top: 20px;
+            float: right;
+            width: 300px;
+        }
+        .totals td {
+            padding: 5px;
+        }
+
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+
+        .signature-block {
+            margin-top: 30px;
+        }
+
+        .print-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        /* Стили для печати (формат А4, без кнопки) */
+        @media print {
+            body {
+                padding: 0;
+            }
+            .print-btn {
+                display: none;
+            }
+            .container {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="print-btn" onclick="window.print()">Распечатать накладную</button>
+
+        <div style="text-align: right; margin-bottom: 20px; font-size: 12px;">
+            Унифицированная форма ТОРГ-12
+        </div>
+
+        <table class="header-table">
+            <tr>
+                <td style="width: 150px;"><strong>Поставщик:</strong></td>
+                <td>{{ settings.seller_name or 'ФИО самозанятого' }} (НПД)</td>
+            </tr>
+            <tr>
+                <td><strong>Покупатель:</strong></td>
+                <td>
+                    {{ order.client_name if order.client_name else 'Частное лицо / Компания' }}
+                    {% if order.client %}
+                        {% if order.client.inn %}, ИНН {{ order.client.inn }}{% endif %}
+                        {% if order.client.address %}, {{ order.client.address }}{% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Основание:</strong></td>
+                <td>Заказ/Счет № {{ order.order_number }} от {{ now }}</td>
+            </tr>
+        </table>
+
+        <!-- Title -->
+        <div class="invoice-title">
+            ТОВАРНАЯ НАКЛАДНАЯ № {{ order.order_number }} от {{ now }}
+        </div>
+
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">№ п/п</th>
+                    <th style="width: 50%;">Товар / Услуга</th>
+                    <th style="width: 10%;">Ед. изм.</th>
+                    <th style="width: 10%;">Количество</th>
+                    <th style="width: 10%;">Цена, руб.</th>
+                    <th style="width: 15%;">Сумма, руб.</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center">1</td>
+                    <td>Изделие 3D-печати: {{ order.name }}</td>
+                    <td class="text-center">шт</td>
+                    <td class="text-center">{{ order.quantity }}</td>
+                    {% set unit_price = order.price / order.quantity if order.quantity > 0 else 0 %}
+                    <td class="text-right">{{ "%.2f"|format(unit_price) }}</td>
+                    <td class="text-right">{{ "%.2f"|format(order.price) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="clearfix">
+            <table class="totals">
+                <tr>
+                    <td class="text-right font-bold">Итого:</td>
+                    <td class="text-right font-bold" style="width: 100px;">{{ "%.2f"|format(order.price) }}</td>
+                </tr>
+                <tr>
+                    <td class="text-right font-bold">В том числе НДС:</td>
+                    <td class="text-right font-bold">Без НДС</td>
+                </tr>
+                <tr>
+                    <td class="text-right font-bold">Всего к оплате:</td>
+                    <td class="text-right font-bold">{{ "%.2f"|format(order.price) }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style="margin-top: 30px;">Всего отпущено наименований: 1, на сумму {{ "%.2f"|format(order.price) }} руб.</p>
+
+        <hr style="border: 1px solid #000; margin: 20px 0;">
+
+        <!-- Signatures -->
+        <div class="signature-block">
+            <table style="width: 100%; border: none;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p><strong>Отпуск груза разрешил / Сдал:</strong></p>
+                        <br>
+                        <p>________________ / {{ settings.seller_name or '________________' }} /</p>
+                        <p style="font-size: 10px; margin-top: 5px;">(подпись) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (расшифровка)</p>
+                        <br><br>
+                        <p>М.П.</p>
+                    </td>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p><strong>Груз принял / Получил:</strong></p>
+                        <br>
+                        <p>________________ / _______________________ /</p>
+                        <p style="font-size: 10px; margin-top: 5px;">(подпись) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (расшифровка)</p>
+                        <br><br>
+                        <p>М.П.</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

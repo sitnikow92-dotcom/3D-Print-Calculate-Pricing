@@ -129,7 +129,11 @@
 
         <!-- Title -->
         <div class="invoice-title">
-            Счет на оплату № {{ order.id }} от {{ now }}
+            {% if doc_type == 'contract' %}
+            Счет-договор № {{ order.order_number }} от {{ now }} со всеми условиями выполнения работ
+            {% else %}
+            Счет на оплату № {{ order.order_number }} от {{ now }}
+            {% endif %}
         </div>
 
         <div style="margin-bottom: 20px;">
@@ -140,7 +144,13 @@
                 </tr>
                 <tr>
                     <td><strong>Заказчик:</strong></td>
-                    <td>Частное лицо / Компания</td>
+                    <td>
+                        {{ order.client_name if order.client_name else 'Частное лицо / Компания' }}
+                        {% if order.client %}
+                            {% if order.client.inn %}, ИНН {{ order.client.inn }}{% endif %}
+                            {% if order.client.address %}, {{ order.client.address }}{% endif %}
+                        {% endif %}
+                    </td>
                 </tr>
             </table>
         </div>
@@ -161,9 +171,10 @@
                 <tr>
                     <td class="text-center">1</td>
                     <td>Услуги 3D-печати: {{ order.name }}</td>
-                    <td class="text-center">1</td>
+                    <td class="text-center">{{ order.quantity }}</td>
                     <td class="text-center">шт</td>
-                    <td class="text-right">{{ "%.2f"|format(order.price) }}</td>
+                    {% set unit_price = order.price / order.quantity if order.quantity > 0 else 0 %}
+                    <td class="text-right">{{ "%.2f"|format(unit_price) }}</td>
                     <td class="text-right">{{ "%.2f"|format(order.price) }}</td>
                 </tr>
             </tbody>
@@ -188,7 +199,14 @@
         </div>
 
         <p><strong>Всего наименований 1, на сумму {{ "%.2f"|format(order.price) }} руб.</strong></p>
+
+        {% if doc_type == 'contract' %}
+        <p style="font-size: 12px; margin-top: 20px;">
+            <strong>Условия выполнения работ:</strong> Оплата данного счета-договора означает согласие Заказчика с условиями оказания услуг. Услуги оказываются Исполнителем в полном объеме после получения 100% предоплаты (если не оговорено иное). Стороны признают юридическую силу документов, переданных по электронной почте или мессенджерам. Услуга оказывается плательщиком налога на профессиональный доход (НПД).
+        </p>
+        {% else %}
         <p>Внимание! Оплата данного счета означает согласие с условиями оказания услуг. Услуга оказывается плательщиком налога на профессиональный доход (НПД).</p>
+        {% endif %}
 
         <hr style="border: 1px solid #000; margin: 30px 0;">
 

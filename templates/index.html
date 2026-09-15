@@ -85,6 +85,12 @@
                                     <input type="email" class="form-control" id="cli-email" placeholder="Email">
                                 </div>
                                 <div class="col-12">
+                                    <input type="text" class="form-control" id="cli-inn" placeholder="ИНН">
+                                </div>
+                                <div class="col-12">
+                                    <input type="text" class="form-control" id="cli-address" placeholder="Адрес">
+                                </div>
+                                <div class="col-12">
                                     <textarea class="form-control" id="cli-notes" placeholder="Заметки"></textarea>
                                 </div>
                                 <div class="col-12">
@@ -115,6 +121,7 @@
                                         <th>Статус</th>
                                         <th>Сумма</th>
                                         <th>Файл</th>
+                                        <th>Документы</th>
                                     </tr>
                                 </thead>
                                 <tbody id="detail-cli-orders"></tbody>
@@ -203,6 +210,8 @@
                                     <input type="text" class="form-control mb-2" id="new-cli-name" placeholder="Имя / Компания">
                                     <input type="text" class="form-control mb-2" id="new-cli-phone" placeholder="Телефон">
                                     <input type="email" class="form-control mb-2" id="new-cli-email" placeholder="Email">
+                                    <input type="text" class="form-control mb-2" id="new-cli-inn" placeholder="ИНН">
+                                    <input type="text" class="form-control mb-2" id="new-cli-address" placeholder="Адрес">
                                     <textarea class="form-control" id="new-cli-notes" placeholder="Заметки"></textarea>
                                 </div>
                                 <div class="mb-3">
@@ -512,6 +521,8 @@
                 formData.append('new_client_name', document.getElementById('new-cli-name').value);
                 formData.append('new_client_phone', document.getElementById('new-cli-phone').value);
                 formData.append('new_client_email', document.getElementById('new-cli-email').value);
+                formData.append('new_client_inn', document.getElementById('new-cli-inn').value);
+                formData.append('new_client_address', document.getElementById('new-cli-address').value);
                 formData.append('new_client_notes', document.getElementById('new-cli-notes').value);
             }
         }
@@ -624,7 +635,17 @@
                     </select>
                 </div>
                 <div class="d-flex mt-2 gap-2">
-                    <button class="btn btn-sm btn-info w-50" onclick="window.open('/invoice/${order.id}', '_blank')">Счет</button>
+                    <div class="dropdown w-50">
+                        <button class="btn btn-sm btn-info w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Документы
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="window.open('/invoice/${order.id}?type=schet', '_blank')">Счет на оплату</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="window.open('/invoice/${order.id}?type=contract', '_blank')">Счет-договор</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="window.open('/waybill/${order.id}', '_blank')">Товарная накладная</a></li>
+                        </ul>
+                    </div>
                     <button class="btn btn-sm btn-danger w-50" onclick="deleteOrder(${order.id})">Удалить</button>
                 </div>
             `;
@@ -669,6 +690,8 @@
             name: document.getElementById('cli-name').value,
             phone: document.getElementById('cli-phone').value,
             email: document.getElementById('cli-email').value,
+            inn: document.getElementById('cli-inn').value,
+            address: document.getElementById('cli-address').value,
             notes: document.getElementById('cli-notes').value
         };
         try {
@@ -688,21 +711,54 @@
         if (!client) return;
 
         document.getElementById('detail-cli-name').textContent = client.name;
-        document.getElementById('detail-cli-phone').textContent = client.phone;
-        document.getElementById('detail-cli-email').textContent = client.email;
-        document.getElementById('detail-cli-notes').textContent = client.notes;
+        document.getElementById('detail-cli-phone').textContent = client.phone || '-';
+        document.getElementById('detail-cli-email').textContent = client.email || '-';
+        document.getElementById('detail-cli-notes').textContent = client.notes || '-';
+
+        // Add additional info if present
+        let detailsHtml = `<p><strong>Телефон:</strong> ${client.phone || '-'}</p>
+                           <p><strong>Email:</strong> ${client.email || '-'}</p>`;
+        if (client.inn) detailsHtml += `<p><strong>ИНН:</strong> ${client.inn}</p>`;
+        if (client.address) detailsHtml += `<p><strong>Адрес:</strong> ${client.address}</p>`;
+        detailsHtml += `<p><strong>Заметки:</strong> ${client.notes || '-'}</p>`;
+
+        // Update client info section
+        const cardBody = document.querySelector('#client-details-card .card-body');
+        // We replace the initial paragraphs with our dynamically built string
+        // but preserve the hr and table
+        const hrIndex = cardBody.innerHTML.indexOf('<hr>');
+        if (hrIndex !== -1) {
+             const lowerPart = cardBody.innerHTML.substring(hrIndex);
+             cardBody.innerHTML = detailsHtml + lowerPart;
+        }
 
         // Filter orders for this client
         const cOrders = allOrdersList.filter(o => o.client_id === client.id);
         const tbody = document.getElementById('detail-cli-orders');
         tbody.innerHTML = cOrders.map(o => {
-            let fileLnk = o.file_path ? `<a href="/uploads/${o.file_path}" target="_blank">Скачать</a>` : '-';
+            let fileLnk = o.file_path ? `<a href="/uploads/${o.file_path}" target="_blank" title="Скачать файл">💾</a>` : '-';
+
+            let docsLnk = `
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        Документы
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="window.open('/invoice/${o.id}?type=schet', '_blank')">Счет</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="window.open('/invoice/${o.id}?type=contract', '_blank')">Счет-договор</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="window.open('/waybill/${o.id}', '_blank')">Накладная</a></li>
+                    </ul>
+                </div>
+            `;
+
             return `<tr>
                 <td>${o.order_number}</td>
                 <td>${o.name}</td>
                 <td><span class="badge bg-secondary">${o.status}</span></td>
                 <td>${o.price.toFixed(2)} ₽</td>
                 <td>${fileLnk}</td>
+                <td>${docsLnk}</td>
             </tr>`;
         }).join('');
 

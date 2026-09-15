@@ -62,6 +62,8 @@ class Client(db.Model):
     name = db.Column(db.String(200), nullable=False)
     phone = db.Column(db.String(50), nullable=True)
     email = db.Column(db.String(100), nullable=True)
+    inn = db.Column(db.String(20), nullable=True)
+    address = db.Column(db.String(255), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     orders = db.relationship('Order', backref='client', lazy=True)
 
@@ -71,6 +73,8 @@ class Client(db.Model):
             'name': self.name,
             'phone': self.phone,
             'email': self.email,
+            'inn': self.inn,
+            'address': self.address,
             'notes': self.notes
         }
 
@@ -230,6 +234,8 @@ def add_client():
         name=data['name'],
         phone=data.get('phone', ''),
         email=data.get('email', ''),
+        inn=data.get('inn', ''),
+        address=data.get('address', ''),
         notes=data.get('notes', '')
     )
     db.session.add(new_client)
@@ -257,6 +263,8 @@ def add_order():
                 name=data.get('new_client_name'),
                 phone=data.get('new_client_phone', ''),
                 email=data.get('new_client_email', ''),
+                inn=data.get('new_client_inn', ''),
+                address=data.get('new_client_address', ''),
                 notes=data.get('new_client_notes', '')
             )
             db.session.add(new_client)
@@ -423,9 +431,18 @@ def update_settings():
 def get_invoice(id):
     order = Order.query.get_or_404(id)
     settings = Settings.query.first()
+    doc_type = request.args.get('type', 'schet') # 'schet' or 'contract'
     from datetime import datetime
     now = datetime.now().strftime("%d.%m.%Y")
-    return render_template('invoice.html', order=order, settings=settings, now=now)
+    return render_template('invoice.html', order=order, settings=settings, now=now, doc_type=doc_type)
+
+@app.route('/waybill/<int:id>', methods=['GET'])
+def get_waybill(id):
+    order = Order.query.get_or_404(id)
+    settings = Settings.query.first()
+    from datetime import datetime
+    now = datetime.now().strftime("%d.%m.%Y")
+    return render_template('waybill.html', order=order, settings=settings, now=now)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
