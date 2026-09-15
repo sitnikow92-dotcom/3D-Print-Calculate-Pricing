@@ -120,7 +120,8 @@
                             <p class="mb-1 small text-muted"><strong>Дополнительно:</strong></p>
                             <p class="mb-1 small ms-2">Наценка: <span id="res-markup">0</span> ₽</p>
                             <p class="mb-1 small ms-2">Резерв на брак: <span id="res-failure">0</span> ₽</p>
-                            <p class="mb-3 small ms-2">Моделирование: <span id="res-mod">0</span> ₽</p>
+                            <p class="mb-1 small ms-2">Моделирование: <span id="res-mod">0</span> ₽</p>
+                            <p class="mb-3 small ms-2 text-danger">Налог самозанятого: <span id="res-tax">0</span> ₽</p>
 
                             <h6>Создать заказ</h6>
                             <form id="create-order-form">
@@ -235,6 +236,34 @@
                             <label class="form-label">Процент на брак (%)</label>
                             <input type="number" class="form-control" id="set-failure" step="0.1" required>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">Налог самозанятого (%)</label>
+                            <input type="number" class="form-control" id="set-tax" step="0.1" required>
+                        </div>
+
+                        <hr>
+                        <h6>Реквизиты для счета</h6>
+                        <div class="mb-3">
+                            <label class="form-label">ФИО / Название</label>
+                            <input type="text" class="form-control" id="set-seller-name" placeholder="Иванов И. И.">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ИНН</label>
+                            <input type="text" class="form-control" id="set-seller-inn">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Банк</label>
+                            <input type="text" class="form-control" id="set-seller-bank">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Расчетный счет</label>
+                            <input type="text" class="form-control" id="set-seller-account">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">БИК</label>
+                            <input type="text" class="form-control" id="set-seller-bik">
+                        </div>
+
                         <button type="button" class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
                     </form>
                 </div>
@@ -326,6 +355,7 @@
                 document.getElementById('res-elec').textContent = data.electricity_cost.toFixed(2);
                 document.getElementById('res-amort').textContent = data.amortization_cost.toFixed(2);
                 document.getElementById('res-mod').textContent = data.modeling_cost.toFixed(2);
+                document.getElementById('res-tax').textContent = data.tax_cost.toFixed(2);
             } else {
                 alert('Ошибка: ' + data.error);
             }
@@ -438,7 +468,10 @@
                         <option value="Готов" ${order.status === 'Готов' ? 'selected' : ''}>Готов</option>
                     </select>
                 </div>
-                <button class="btn btn-sm btn-danger w-100 mt-2" onclick="deleteOrder(${order.id})">Удалить</button>
+                <div class="d-flex mt-2 gap-2">
+                    <button class="btn btn-sm btn-info w-50" onclick="window.open('/invoice/${order.id}', '_blank')">Счет</button>
+                    <button class="btn btn-sm btn-danger w-50" onclick="deleteOrder(${order.id})">Удалить</button>
+                </div>
             `;
             const col = document.getElementById(`col-${order.status}`);
             if (col) {
@@ -566,6 +599,13 @@
             document.getElementById('set-elec').value = data.electricity_rate;
             document.getElementById('set-markup').value = data.markup_percent;
             document.getElementById('set-failure').value = data.failure_percent;
+            document.getElementById('set-tax').value = data.tax_percent;
+
+            document.getElementById('set-seller-name').value = data.seller_name || '';
+            document.getElementById('set-seller-inn').value = data.seller_inn || '';
+            document.getElementById('set-seller-bank').value = data.seller_bank || '';
+            document.getElementById('set-seller-account').value = data.seller_account || '';
+            document.getElementById('set-seller-bik').value = data.seller_bik || '';
         } catch(e) { console.error(e); }
     }
 
@@ -573,15 +613,25 @@
         const rate = document.getElementById('set-elec').value;
         const markup = document.getElementById('set-markup').value;
         const failure = document.getElementById('set-failure').value;
+        const tax = document.getElementById('set-tax').value;
+
+        const payload = {
+            electricity_rate: rate,
+            markup_percent: markup,
+            failure_percent: failure,
+            tax_percent: tax,
+            seller_name: document.getElementById('set-seller-name').value,
+            seller_inn: document.getElementById('set-seller-inn').value,
+            seller_bank: document.getElementById('set-seller-bank').value,
+            seller_account: document.getElementById('set-seller-account').value,
+            seller_bik: document.getElementById('set-seller-bik').value
+        };
+
         try {
             const res = await fetch('/api/settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    electricity_rate: rate,
-                    markup_percent: markup,
-                    failure_percent: failure
-                })
+                body: JSON.stringify(payload)
             });
             if(res.ok) alert('Настройки сохранены');
         } catch(e) { console.error(e); }

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Счет на оплату № {{ order.id }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            color: #000;
+            background-color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .bank-details td {
+            border: 1px solid #000;
+            padding: 5px;
+            vertical-align: top;
+        }
+
+        .invoice-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #000;
+        }
+
+        .items-table th, .items-table td {
+            border: 1px solid #000;
+            padding: 8px;
+        }
+
+        .items-table th {
+            text-align: center;
+        }
+
+        .totals {
+            margin-top: 20px;
+            float: right;
+            width: 300px;
+        }
+        .totals td {
+            padding: 5px;
+        }
+
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+
+        .signature-block {
+            margin-top: 50px;
+        }
+
+        .print-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        /* Стили для печати (формат А4, без кнопки) */
+        @media print {
+            body {
+                padding: 0;
+            }
+            .print-btn {
+                display: none;
+            }
+            .container {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="print-btn" onclick="window.print()">Распечатать счет</button>
+
+        <!-- Bank details block -->
+        <table class="bank-details">
+            <tr>
+                <td colspan="2" rowspan="2">
+                    <small>Банк получателя</small><br>
+                    {{ settings.seller_bank or 'Наименование банка' }}
+                </td>
+                <td>БИК</td>
+                <td>{{ settings.seller_bik or '-' }}</td>
+            </tr>
+            <tr>
+                <td>Сч. №</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>ИНН {{ settings.seller_inn or '-' }}</td>
+                <td>КПП -</td>
+                <td rowspan="2" style="vertical-align: top;">Сч. №</td>
+                <td rowspan="2" style="vertical-align: top;">{{ settings.seller_account or '-' }}</td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <small>Получатель</small><br>
+                    {{ settings.seller_name or 'ФИО самозанятого' }}
+                </td>
+            </tr>
+        </table>
+
+        <!-- Title -->
+        <div class="invoice-title">
+            Счет на оплату № {{ order.id }} от {{ now }}
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <table>
+                <tr>
+                    <td style="width: 150px;"><strong>Исполнитель:</strong></td>
+                    <td>{{ settings.seller_name or 'ФИО самозанятого' }} (НПД)</td>
+                </tr>
+                <tr>
+                    <td><strong>Заказчик:</strong></td>
+                    <td>Частное лицо / Компания</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">№</th>
+                    <th style="width: 55%;">Наименование работ, услуг</th>
+                    <th style="width: 10%;">Кол-во</th>
+                    <th style="width: 10%;">Ед.</th>
+                    <th style="width: 10%;">Цена</th>
+                    <th style="width: 10%;">Сумма</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center">1</td>
+                    <td>Услуги 3D-печати: {{ order.name }}</td>
+                    <td class="text-center">1</td>
+                    <td class="text-center">шт</td>
+                    <td class="text-right">{{ "%.2f"|format(order.price) }}</td>
+                    <td class="text-right">{{ "%.2f"|format(order.price) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="clearfix">
+            <table class="totals">
+                <tr>
+                    <td class="text-right font-bold">Итого:</td>
+                    <td class="text-right font-bold" style="width: 100px;">{{ "%.2f"|format(order.price) }} ₽</td>
+                </tr>
+                <tr>
+                    <td class="text-right font-bold">Без налога (НДС):</td>
+                    <td class="text-right font-bold">-</td>
+                </tr>
+                <tr>
+                    <td class="text-right font-bold">Всего к оплате:</td>
+                    <td class="text-right font-bold">{{ "%.2f"|format(order.price) }} ₽</td>
+                </tr>
+            </table>
+        </div>
+
+        <p><strong>Всего наименований 1, на сумму {{ "%.2f"|format(order.price) }} руб.</strong></p>
+        <p>Внимание! Оплата данного счета означает согласие с условиями оказания услуг. Услуга оказывается плательщиком налога на профессиональный доход (НПД).</p>
+
+        <hr style="border: 1px solid #000; margin: 30px 0;">
+
+        <!-- Signatures -->
+        <div class="signature-block">
+            <table style="width: 100%; border: none;">
+                <tr>
+                    <td style="width: 20%;">Исполнитель</td>
+                    <td style="width: 30%; border-bottom: 1px solid #000;"></td>
+                    <td style="width: 50%; padding-left: 20px;">/ {{ settings.seller_name or '_________________' }} /</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

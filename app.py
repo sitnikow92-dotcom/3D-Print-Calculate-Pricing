@@ -80,13 +80,25 @@ class Settings(db.Model):
     electricity_rate = db.Column(db.Float, nullable=False, default=5.0)
     markup_percent = db.Column(db.Float, nullable=False, default=100.0)
     failure_percent = db.Column(db.Float, nullable=False, default=10.0)
+    tax_percent = db.Column(db.Float, nullable=False, default=4.0)
+    seller_name = db.Column(db.String(200), nullable=True)
+    seller_inn = db.Column(db.String(20), nullable=True)
+    seller_bank = db.Column(db.String(200), nullable=True)
+    seller_account = db.Column(db.String(50), nullable=True)
+    seller_bik = db.Column(db.String(20), nullable=True)
 
     def to_dict(self):
         return {
             'id': self.id,
             'electricity_rate': self.electricity_rate,
             'markup_percent': self.markup_percent,
-            'failure_percent': self.failure_percent
+            'failure_percent': self.failure_percent,
+            'tax_percent': self.tax_percent,
+            'seller_name': self.seller_name,
+            'seller_inn': self.seller_inn,
+            'seller_bank': self.seller_bank,
+            'seller_account': self.seller_account,
+            'seller_bik': self.seller_bik
         }
 
 # Initialize database
@@ -94,7 +106,7 @@ with app.app_context():
     db.create_all()
     # Add default setting if not exists
     if not Settings.query.first():
-        default_settings = Settings(electricity_rate=5.0, markup_percent=100.0, failure_percent=10.0)
+        default_settings = Settings(electricity_rate=5.0, markup_percent=100.0, failure_percent=10.0, tax_percent=4.0)
         db.session.add(default_settings)
         db.session.commit()
 
@@ -247,7 +259,9 @@ def calculate_cost():
         elif modeling_complexity == "complex":
             modeling_cost = 3000.0
 
-        total_price = client_print_price + modeling_cost
+        intermediate_total = client_print_price + modeling_cost
+        tax_cost = intermediate_total * (settings.tax_percent / 100.0)
+        total_price = intermediate_total + tax_cost
 
         return jsonify({
             'self_cost': self_cost,
@@ -255,6 +269,7 @@ def calculate_cost():
             'failure_cost': failure_cost,
             'client_print_price': client_print_price,
             'modeling_cost': modeling_cost,
+            'tax_cost': tax_cost,
             'total_price': total_price,
             'material_cost': material_cost,
             'electricity_cost': electricity_cost,
@@ -277,9 +292,25 @@ def update_settings():
         settings.electricity_rate = float(data.get('electricity_rate', settings.electricity_rate))
         settings.markup_percent = float(data.get('markup_percent', settings.markup_percent))
         settings.failure_percent = float(data.get('failure_percent', settings.failure_percent))
+        settings.tax_percent = float(data.get('tax_percent', settings.tax_percent))
+        settings.seller_name = data.get('seller_name', settings.seller_name)
+        settings.seller_inn = data.get('seller_inn', settings.seller_inn)
+        settings.seller_bank = data.get('seller_bank', settings.seller_bank)
+        settings.seller_account = data.get('seller_account', settings.seller_account)
+        settings.seller_bik = data.get('seller_bik', settings.seller_bik)
+
         db.session.commit()
         return jsonify(settings.to_dict())
     return jsonify({'error': 'Settings not found'}), 404
+
+# --- Invoices ---
+@app.route('/invoice/<int:id>', methods=['GET'])
+def get_invoice(id):
+    order = Order.query.get_or_404(id)
+    settings = Settings.query.first()
+    from datetime import datetime
+    now = datetime.now().strftime("%d.%m.%Y")
+    return render_template('invoice.html', order=order, settings=settings, now=now)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
