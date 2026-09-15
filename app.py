@@ -51,8 +51,16 @@ class Order(db.Model):
     cost = db.Column(db.Float, nullable=False) # Self-cost
     material_id = db.Column(db.Integer, db.ForeignKey('material.id'), nullable=True)
     weight_used = db.Column(db.Float, nullable=True) # Weight or volume used
+    printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable=True)
+    print_hours = db.Column(db.Float, default=0.0)
 
     def to_dict(self):
+        printer_name = None
+        if self.printer_id:
+            printer = Printer.query.get(self.printer_id)
+            if printer:
+                printer_name = printer.name
+
         return {
             'id': self.id,
             'name': self.name,
@@ -61,7 +69,10 @@ class Order(db.Model):
             'price': self.price,
             'cost': self.cost,
             'material_id': self.material_id,
-            'weight_used': self.weight_used
+            'weight_used': self.weight_used,
+            'printer_id': self.printer_id,
+            'print_hours': self.print_hours,
+            'printer_name': printer_name
         }
 
 class Settings(db.Model):
@@ -160,7 +171,9 @@ def add_order():
         price=float(data['price']),
         cost=float(data['cost']),
         material_id=data.get('material_id'),
-        weight_used=data.get('weight_used')
+        weight_used=data.get('weight_used'),
+        printer_id=data.get('printer_id'),
+        print_hours=float(data.get('print_hours', 0.0))
     )
     db.session.add(new_order)
     db.session.commit()

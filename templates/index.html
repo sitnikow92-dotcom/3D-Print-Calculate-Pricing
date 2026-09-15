@@ -343,7 +343,11 @@
         const name = document.getElementById('order-name').value;
         const desc = document.getElementById('order-desc').value;
         const material_id = document.getElementById('calc-material').value;
+        const printer_id = document.getElementById('calc-printer').value;
         const weight_used = document.getElementById('calc-weight').value;
+        const hours = parseFloat(document.getElementById('calc-hours').value || 0);
+        const minutes = parseFloat(document.getElementById('calc-minutes').value || 0);
+        const total_hours = hours + (minutes / 60.0);
 
         if (!name) {
             alert('Введите название заказа.');
@@ -361,7 +365,9 @@
                     price: currentCalcResult.total_price,
                     cost: currentCalcResult.self_cost,
                     material_id: material_id,
-                    weight_used: weight_used
+                    weight_used: weight_used,
+                    printer_id: printer_id,
+                    print_hours: total_hours
                 })
             });
 
@@ -393,14 +399,35 @@
         // Clear all columns
         document.querySelectorAll('.kanban-column .cards-container').forEach(el => el.innerHTML = '');
 
+        // Calculate printer queues
+        const activePrintersWorkload = {};
+        orders.forEach(o => {
+            if (o.status === 'В работе' && o.printer_id) {
+                activePrintersWorkload[o.printer_id] = (activePrintersWorkload[o.printer_id] || 0) + o.print_hours;
+            }
+        });
+
         orders.forEach(order => {
             const card = document.createElement('div');
             card.className = 'kanban-card';
+
+            let printerInfo = '';
+            if (order.printer_name) {
+                printerInfo = `<p class="mb-1 small"><strong>Принтер:</strong> ${order.printer_name} (~${order.print_hours.toFixed(1)} ч.)</p>`;
+            }
+
+            let waitBadge = '';
+            if (order.status === 'Очередь' && order.printer_id && activePrintersWorkload[order.printer_id] > 0) {
+                waitBadge = `<span class="badge bg-warning text-dark d-block mb-2">Ожидание принтера: ~${activePrintersWorkload[order.printer_id].toFixed(1)} ч.</span>`;
+            }
+
             card.innerHTML = `
                 <h5>${order.name}</h5>
                 <p class="text-muted small mb-2">${order.description || ''}</p>
+                ${printerInfo}
+                ${waitBadge}
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="badge bg-secondary">Себестоимость: ${order.cost.toFixed(2)}₽</span>
+                    <span class="badge bg-secondary">Себест: ${order.cost.toFixed(2)}₽</span>
                     <span class="badge bg-success">Цена: ${order.price.toFixed(2)}₽</span>
                 </div>
                 <div class="btn-group w-100" role="group">
