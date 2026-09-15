@@ -57,11 +57,29 @@ class Printer(db.Model):
             'resource': self.resource
         }
 
+class Client(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    phone = db.Column(db.String(50), nullable=True)
+    email = db.Column(db.String(100), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    orders = db.relationship('Order', backref='client', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'phone': self.phone,
+            'email': self.email,
+            'notes': self.notes
+        }
+
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    order_number = db.Column(db.String(20), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    status = db.Column(db.String(20), nullable=False, default="Согласование") # "Согласование", "Очередь", "В работе", "Готов"
+    status = db.Column(db.String(20), nullable=False, default="Согласование") # "Согласование", "Очередь", "В работе", "Готов", "Архив"
     price = db.Column(db.Float, nullable=False) # Total cost
     cost = db.Column(db.Float, nullable=False) # Self-cost
     material_id = db.Column(db.Integer, db.ForeignKey('material.id'), nullable=True)
@@ -70,6 +88,7 @@ class Order(db.Model):
     print_hours = db.Column(db.Float, default=0.0)
     quantity = db.Column(db.Integer, default=1)
     file_path = db.Column(db.String(255), nullable=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=True)
 
     def to_dict(self):
         printer_name = None
@@ -78,8 +97,13 @@ class Order(db.Model):
             if printer:
                 printer_name = printer.name
 
+        client_name = None
+        if self.client_id:
+            client_name = self.client.name
+
         return {
             'id': self.id,
+            'order_number': self.order_number,
             'name': self.name,
             'description': self.description,
             'status': self.status,
@@ -91,7 +115,9 @@ class Order(db.Model):
             'print_hours': self.print_hours,
             'printer_name': printer_name,
             'quantity': self.quantity,
-            'file_path': self.file_path
+            'file_path': self.file_path,
+            'client_id': self.client_id,
+            'client_name': client_name
         }
 
 class Settings(db.Model):
@@ -192,6 +218,24 @@ def get_orders():
     orders = Order.query.all()
     return jsonify([o.to_dict() for o in orders])
 
+@app.route('/api/clients', methods=['GET'])
+def get_clients():
+    clients = Client.query.all()
+    return jsonify([c.to_dict() for c in clients])
+
+@app.route('/api/clients', methods=['POST'])
+def add_client():
+    data = request.json
+    new_client = Client(
+        name=data['name'],
+        phone=data.get('phone', ''),
+        email=data.get('email', ''),
+        notes=data.get('notes', '')
+    )
+    db.session.add(new_client)
+    db.session.commit()
+    return jsonify(new_client.to_dict()), 201
+
 @app.route('/api/orders', methods=['POST'])
 def add_order():
     data = request.form
@@ -205,18 +249,48 @@ def add_order():
             file.save(save_path)
             file_path = filename
 
+    # Handle Client logic
+    client_id = data.get('client_id')
+    if client_id == 'new':
+        if data.get('new_client_name'):
+            new_client = Client(
+                name=data.get('new_client_name'),
+                phone=data.get('new_client_phone', ''),
+                email=data.get('new_client_email', ''),
+                notes=data.get('new_client_notes', '')
+            )
+            db.session.add(new_client)
+            db.session.flush() # To get the ID
+            client_id = new_client.id
+        else:
+            client_id = None # Skip client creation if no name was provided
+    elif client_id:
+        client_id = int(client_id)
+    else:
+        client_id = None
+
+    # Generate Order Number
+    last_order = Order.query.order_by(Order.id.desc()).first()
+    if last_order:
+        next_num = last_order.id + 1
+    else:
+        next_num = 1
+    order_number = f"{next_num:04d}"
+
     new_order = Order(
+        order_number=order_number,
         name=data['name'],
         description=data.get('description', ''),
         status=data.get('status', 'Согласование'),
         price=float(data['price']),
         cost=float(data['cost']),
-        material_id=data.get('material_id') if data.get('material_id') else None,
-        weight_used=data.get('weight_used') if data.get('weight_used') else None,
-        printer_id=data.get('printer_id') if data.get('printer_id') else None,
+        material_id=int(data.get('material_id')) if data.get('material_id') else None,
+        weight_used=float(data.get('weight_used')) if data.get('weight_used') else None,
+        printer_id=int(data.get('printer_id')) if data.get('printer_id') else None,
         print_hours=float(data.get('print_hours', 0.0)),
         quantity=int(data.get('quantity', 1)),
-        file_path=file_path
+        file_path=file_path,
+        client_id=client_id
     )
     db.session.add(new_order)
     db.session.commit()
