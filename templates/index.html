@@ -132,130 +132,201 @@
             </div>
         </div>
 
-        <!-- Other tabs will be added later -->
         <div class="tab-pane fade" id="calculator" role="tabpanel" aria-labelledby="calculator-tab">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">Параметры печати</div>
-                        <div class="card-body">
-                            <form id="calculator-form">
-                                <div class="mb-3">
-                                    <label class="form-label">Материал</label>
-                                    <select class="form-select" id="calc-material" required></select>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Принтер</label>
-                                    <select class="form-select" id="calc-printer" required></select>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Вес 1 детали (г/мл)</label>
-                                    <input type="number" class="form-control" id="calc-weight" required step="0.1" min="0">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Количество (шт.)</label>
-                                    <input type="number" class="form-control" id="calc-quantity" value="1" required min="1">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Время печати (1 шт.)</label>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control" id="calc-hours" placeholder="Часы" required min="0">
-                                        <span class="input-group-text">ч</span>
-                                        <input type="number" class="form-control" id="calc-minutes" placeholder="Минуты" required min="0" max="59">
-                                        <span class="input-group-text">м</span>
+            <div class="row position-relative">
+                <!-- Controls (Left) -->
+                <div class="col-md-7 mb-5">
+                    <div class="accordion" id="calcAccordion">
+                        <!-- Step 1: Technology & Model -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#acc-tech" aria-expanded="true">
+                                    1. Технология и Параметры печати
+                                </button>
+                            </h2>
+                            <div id="acc-tech" class="accordion-collapse collapse show" data-bs-parent="#calcAccordion">
+                                <div class="accordion-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Принтер</label>
+                                        <select class="form-select" id="calc-printer" onchange="updateState()"></select>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-6 mb-3">
+                                            <label class="form-label">Время печати (ч)</label>
+                                            <input type="number" class="form-control" id="calc-hours" value="0" min="0" onchange="updateState()">
+                                        </div>
+                                        <div class="col-6 mb-3">
+                                            <label class="form-label">Тираж (шт)</label>
+                                            <input type="number" class="form-control" id="calc-qty" value="1" min="1" onchange="updateState()">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Услуги моделирования (₽)</label>
+                                        <input type="number" class="form-control" id="calc-modeling" value="0" min="0" onchange="updateState()">
                                     </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Сложность моделирования</label>
-                                    <select class="form-select" id="calc-complexity">
-                                        <option value="none">Без моделирования (0 руб.)</option>
-                                        <option value="simple">Простая (от 500 руб.)</option>
-                                        <option value="medium">Средняя/Механика (от 1500 руб.)</option>
-                                        <option value="complex">Сложная/Органика (от 3000 руб.)</option>
-                                    </select>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Consumables & Work -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-mats">
+                                    2. Материалы и Работа
+                                </button>
+                            </h2>
+                            <div id="acc-mats" class="accordion-collapse collapse" data-bs-parent="#calcAccordion">
+                                <div class="accordion-body">
+                                    <div id="materials-container">
+                                        <!-- Dynamic materials list added by JS -->
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary mt-2" onclick="addMaterialField()">+ Добавить материал/упаковку</button>
+                                    <hr>
+                                    <div class="mb-3">
+                                        <label class="form-label">Время работы оператора (ч)</label>
+                                        <input type="number" class="form-control" id="calc-operator-hours" value="0.5" step="0.1" min="0" onchange="updateState()">
+                                    </div>
                                 </div>
-                                <button type="button" class="btn btn-primary" onclick="calculateCost()">Рассчитать</button>
-                            </form>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Pricing Strategy -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-pricing">
+                                    3. Продажа и Скидки
+                                </button>
+                            </h2>
+                            <div id="acc-pricing" class="accordion-collapse collapse" data-bs-parent="#calcAccordion">
+                                <div class="accordion-body">
+                                    <div class="row mb-3">
+                                        <div class="col-6">
+                                            <label class="form-label">Стратегия ценообразования</label>
+                                            <select class="form-select" id="calc-strategy" onchange="updateState()">
+                                                <option value="markup">Наценка (%)</option>
+                                                <option value="target_profit">Целевая прибыль (₽)</option>
+                                                <option value="fixed_price">Фиксированная цена (₽)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">Значение стратегии</label>
+                                            <input type="number" class="form-control" id="calc-strategy-val" value="100" onchange="updateState()">
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-6">
+                                            <label class="form-label">Тип скидки</label>
+                                            <select class="form-select" id="calc-discount-type" onchange="updateState()">
+                                                <option value="percent">Процент (%)</option>
+                                                <option value="absolute">Сумма (₽)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">Размер скидки</label>
+                                            <input type="number" class="form-control" id="calc-discount-val" value="0" min="0" onchange="updateState()">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">What-If Аналитика (Симуляция цены)</label>
+                                        <input type="range" class="form-range" id="calc-whatif" min="-50" max="150" value="0" oninput="document.getElementById('whatif-val').textContent = this.value; simulatePrice()">
+                                        <div class="text-center small">Изменение от базовой цены: <span id="whatif-val">0</span>%</div>
+                                    </div>
+
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="calc-acquiring" onchange="updateState()">
+                                        <label class="form-check-label">Учитывать эквайринг</label>
+                                    </div>
+
+                                    <hr>
+                                    <h6>Создание заказа / Черновик</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label">Название проекта</label>
+                                        <input type="text" class="form-control" id="calc-project-name" placeholder="Деталь для станка">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Клиент</label>
+                                        <select class="form-select" id="calc-client"></select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Файл модели (опционально)</label>
+                                        <input type="file" class="form-control" id="calc-file" accept=".stl,.step,.stp,.obj,.zip">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">Результат</div>
-                        <div class="card-body">
-                            <h5 class="card-title">Итого (с моделированием): <span id="res-total">0</span> ₽</h5>
-                            <h6 class="card-subtitle mb-2 text-success">Цена печати для клиента: <span id="res-client-print">0</span> ₽</h6>
-                            <p class="card-text text-muted mb-1">Чистая себестоимость: <span id="res-self">0</span> ₽</p>
-                            <hr>
-                            <p class="mb-1 small text-muted"><strong>Себестоимость:</strong></p>
-                            <p class="mb-1 small ms-2">Материал: <span id="res-mat">0</span> ₽</p>
-                            <p class="mb-1 small ms-2">Электроэнергия: <span id="res-elec">0</span> ₽</p>
-                            <p class="mb-3 small ms-2">Амортизация: <span id="res-amort">0</span> ₽</p>
-                            <p class="mb-1 small text-muted"><strong>Дополнительно:</strong></p>
-                            <p class="mb-1 small ms-2">Наценка: <span id="res-markup">0</span> ₽</p>
-                            <p class="mb-1 small ms-2">Резерв на брак: <span id="res-failure">0</span> ₽</p>
-                            <p class="mb-1 small ms-2">Моделирование: <span id="res-mod">0</span> ₽</p>
-                            <p class="mb-3 small ms-2 text-danger">Налог самозанятого: <span id="res-tax">0</span> ₽</p>
 
-                            <h6>Создать заказ</h6>
-                            <form id="create-order-form">
-                                <div class="mb-3">
-                                    <label class="form-label">Клиент</label>
-                                    <select class="form-select" id="order-client" onchange="toggleNewClientFields()">
-                                        <option value="">Без клиента (Гость)</option>
-                                        <option value="new">+ Создать нового клиента</option>
-                                    </select>
-                                </div>
-                                <div id="new-client-fields" style="display: none;" class="mb-3 p-3 border rounded bg-light">
-                                    <input type="text" class="form-control mb-2" id="new-cli-name" placeholder="Имя / Компания">
-                                    <input type="text" class="form-control mb-2" id="new-cli-phone" placeholder="Телефон">
-                                    <input type="email" class="form-control mb-2" id="new-cli-email" placeholder="Email">
-                                    <input type="text" class="form-control mb-2" id="new-cli-inn" placeholder="ИНН">
-                                    <input type="text" class="form-control mb-2" id="new-cli-address" placeholder="Адрес">
-                                    <textarea class="form-control" id="new-cli-notes" placeholder="Заметки"></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <input type="text" class="form-control" id="order-name" placeholder="Название заказа" required>
-                                </div>
-                                <div class="mb-3">
-                                    <textarea class="form-control" id="order-desc" placeholder="Описание"></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Файл модели (опционально)</label>
-                                    <input type="file" class="form-control" id="order-file" accept=".stl,.step,.stp,.obj,.zip">
-                                </div>
-                                <button type="button" class="btn btn-success w-100" onclick="createOrderFromCalc()">Сохранить заказ</button>
-                            </form>
+                <!-- Sticky Results Bar (Right) -->
+                <div class="col-md-5">
+                    <div class="card sticky-top border-primary" style="top: 20px;">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Итоги расчета</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Себестоимость:</span>
+                                <strong><span id="res-self">0</span> ₽</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Налог + Эквайринг:</span>
+                                <span><span id="res-fees">0</span> ₽</span>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between mb-2 fs-5">
+                                <span class="text-primary">Цена для клиента:</span>
+                                <strong class="text-primary"><span id="res-client">0</span> ₽</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3 text-success">
+                                <span>Чистая прибыль:</span>
+                                <strong><span id="res-profit">0</span> ₽ (<span id="res-margin">0</span>%)</strong>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success" onclick="createOrder()">Создать заказ</button>
+                                <button class="btn btn-outline-secondary" onclick="saveDraft()">Сохранить черновик</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        </div>
+
+        <!-- Other tabs will be added later -->
+
+
         <div class="tab-pane fade" id="materials" role="tabpanel" aria-labelledby="materials-tab">
             <div class="card mb-4">
-                <div class="card-header">Добавить материал</div>
+                <div class="card-header">Добавить ТМЦ (Материалы, Упаковка и т.д.)</div>
                 <div class="card-body">
                     <form id="add-material-form" class="row g-3">
+                        <div class="col-md-2">
+                            <select class="form-select" id="inv-category" required></select>
+                        </div>
                         <div class="col-md-3">
-                            <input type="text" class="form-control" id="mat-name" placeholder="Название" required>
+                            <input type="text" class="form-control" id="inv-name" placeholder="Название" required>
                         </div>
                         <div class="col-md-2">
-                            <select class="form-select" id="mat-type" required>
-                                <option value="FDM">FDM</option>
-                                <option value="SLA">SLA</option>
+                            <select class="form-select" id="inv-unit" required>
+                                <option value="weight">Вес (г/мл)</option>
+                                <option value="piece">Шт</option>
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <input type="number" class="form-control" id="mat-wv" placeholder="Вес/Объем (г/мл)" required step="0.1">
-                        </div>
-                        <div class="col-md-2">
-                            <input type="number" class="form-control" id="mat-price" placeholder="Цена (₽)" required step="0.1">
-                        </div>
-                        <div class="col-md-2">
-                            <input type="number" class="form-control" id="mat-stock" placeholder="Остаток" required step="0.1">
+                            <input type="number" class="form-control" id="inv-unit-total" placeholder="Итого в ед." required step="0.1">
                         </div>
                         <div class="col-md-1">
-                            <button type="button" class="btn btn-primary w-100" onclick="addMaterial()">+</button>
+                            <input type="number" class="form-control" id="inv-price" placeholder="Цена (₽)" required step="0.1">
+                        </div>
+                        <div class="col-md-1">
+                            <input type="number" class="form-control" id="inv-stock" placeholder="Остаток" required step="0.1">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-primary w-100" onclick="addInventory()">+</button>
                         </div>
                     </form>
                 </div>
@@ -264,15 +335,16 @@
             <table class="table table-striped">
                 <thead>
                     <tr>
+                        <th>Категория</th>
                         <th>Название</th>
-                        <th>Тип</th>
-                        <th>Вес/Объем</th>
+                        <th>Ед. изм.</th>
+                        <th>Кол-во в 1 шт.</th>
                         <th>Цена</th>
-                        <th>Остаток</th>
+                        <th>Остаток на складе</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
-                <tbody id="materials-table-body"></tbody>
+                <tbody id="inventory-table-body"></tbody>
             </table>
         </div>
         <div class="tab-pane fade" id="printers" role="tabpanel" aria-labelledby="printers-tab">
@@ -369,163 +441,197 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    let currentCalcResult = null;
-    let materialsList = [];
+    const calcState = {
+        items: [],
+        print_time_hours: 0,
+        operator_time_hours: 0.5,
+        services: [],
+        printer_id: null,
+        qty: 1,
+        pricing_strategy: { mode: 'markup', value: 100 },
+        discounts: { type: 'percent', value: 0 },
+        acquiring_applied: false,
+        simulatedPriceOffset: 0
+    };
+
+    let inventoryList = [];
     let printersList = [];
     let clientsList = [];
-    let allOrdersList = []; // Used for global search and client history
+    let allOrdersList = [];
+    let backendCalcCache = null;
 
     document.addEventListener("DOMContentLoaded", () => {
         loadOrders();
         loadSelects();
-        loadMaterialsTable();
-        loadPrintersTable();
-        loadSettings();
         loadClientsList();
+        addMaterialField(); // Init one material field
 
-        // Listen for tab changes to reload data
-        document.getElementById('materials-tab').addEventListener('shown.bs.tab', loadMaterialsTable);
-        document.getElementById('printers-tab').addEventListener('shown.bs.tab', loadPrintersTable);
+        // Listeners for updates
         document.getElementById('calculator-tab').addEventListener('shown.bs.tab', loadSelects);
         document.getElementById('clients-tab').addEventListener('shown.bs.tab', loadClientsList);
     });
 
     async function loadSelects() {
         try {
-            const [matRes, prinRes, cliRes] = await Promise.all([
-                fetch('/api/materials'),
+            const [invRes, prinRes, cliRes] = await Promise.all([
+                fetch('/api/inventory'),
                 fetch('/api/printers'),
                 fetch('/api/clients')
             ]);
-            materialsList = await matRes.json();
+            inventoryList = await invRes.json();
             printersList = await prinRes.json();
             clientsList = await cliRes.json();
 
-            updateSelects();
+            updateSelectsHTML();
         } catch (error) {
             console.error('Error loading selects:', error);
         }
     }
 
-    function toggleNewClientFields() {
-        const select = document.getElementById('order-client');
-        const fields = document.getElementById('new-client-fields');
-        if (select.value === 'new') {
-            fields.style.display = 'block';
-        } else {
-            fields.style.display = 'none';
-        }
-    }
-
-    function updateSelects() {
-        const matSelect = document.getElementById('calc-material');
-        matSelect.innerHTML = materialsList.map(m => `<option value="${m.id}">${m.name} (${m.type}) - ${m.price}₽/${m.weight_volume}</option>`).join('');
-
+    function updateSelectsHTML() {
         const prinSelect = document.getElementById('calc-printer');
-        prinSelect.innerHTML = printersList.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        prinSelect.innerHTML = '<option value="">Не выбран</option>' + printersList.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
 
-        const cliSelect = document.getElementById('order-client');
-        let cliHtml = '<option value="">Без клиента (Гость)</option><option value="new">+ Создать нового клиента</option>';
-        cliHtml += clientsList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-        cliSelect.innerHTML = cliHtml;
+        const cliSelect = document.getElementById('calc-client');
+        cliSelect.innerHTML = '<option value="">Без клиента (Гость)</option>' + clientsList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+        // Update all material selects currently rendered
+        document.querySelectorAll('.mat-select').forEach(sel => {
+            const currentVal = sel.value;
+            sel.innerHTML = '<option value="">Выберите материал</option>' + inventoryList.map(i => `<option value="${i.id}">${i.name} (${i.type})</option>`).join('');
+            sel.value = currentVal;
+        });
     }
 
-    async function calculateCost() {
-        const material_id = document.getElementById('calc-material').value;
-        const printer_id = document.getElementById('calc-printer').value;
-        const weight = document.getElementById('calc-weight').value;
-        const hours = document.getElementById('calc-hours').value || 0;
-        const minutes = document.getElementById('calc-minutes').value || 0;
-        const quantity = document.getElementById('calc-quantity').value || 1;
-        const complexity = document.getElementById('calc-complexity').value;
+    function addMaterialField() {
+        const container = document.getElementById('materials-container');
+        const div = document.createElement('div');
+        div.className = 'row mb-2 mat-row';
+        div.innerHTML = `
+            <div class="col-7">
+                <select class="form-select mat-select" onchange="updateState()"></select>
+            </div>
+            <div class="col-4">
+                <input type="number" class="form-control mat-usage" placeholder="Расход" min="0" step="0.1" onchange="updateState()">
+            </div>
+            <div class="col-1">
+                <button class="btn btn-outline-danger" onclick="this.parentElement.parentElement.remove(); updateState()">X</button>
+            </div>
+        `;
+        container.appendChild(div);
+        updateSelectsHTML();
+    }
 
-        if (!material_id || !printer_id || !weight || (hours === 0 && minutes === 0)) {
-            alert('Пожалуйста, заполните все обязательные поля.');
-            return;
-        }
+    function updateState() {
+        // Gather from DOM into calcState
+        calcState.printer_id = document.getElementById('calc-printer').value;
+        calcState.print_time_hours = parseFloat(document.getElementById('calc-hours').value || 0);
+        calcState.qty = parseInt(document.getElementById('calc-qty').value || 1);
+        calcState.operator_time_hours = parseFloat(document.getElementById('calc-operator-hours').value || 0);
 
+        calcState.items = [];
+        document.querySelectorAll('.mat-row').forEach(row => {
+            const id = row.querySelector('.mat-select').value;
+            const amt = row.querySelector('.mat-usage').value;
+            if(id && amt) calcState.items.push({inventory_id: parseInt(id), usage_amount: parseFloat(amt)});
+        });
+
+        const modCost = parseFloat(document.getElementById('calc-modeling').value || 0);
+        calcState.services = [];
+        if(modCost > 0) calcState.services.push({name: 'Modeling', cost: modCost});
+
+        calcState.pricing_strategy.mode = document.getElementById('calc-strategy').value;
+        calcState.pricing_strategy.value = parseFloat(document.getElementById('calc-strategy-val').value || 0);
+        calcState.discounts.type = document.getElementById('calc-discount-type').value;
+        calcState.discounts.value = parseFloat(document.getElementById('calc-discount-val').value || 0);
+        calcState.acquiring_applied = document.getElementById('calc-acquiring').checked;
+
+        // Reset what-if slider
+        document.getElementById('calc-whatif').value = 0;
+        document.getElementById('whatif-val').textContent = 0;
+        calcState.simulatedPriceOffset = 0;
+
+        triggerBackendCalc();
+    }
+
+    async function triggerBackendCalc() {
         try {
             const res = await fetch('/api/calculate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    material_id,
-                    printer_id,
-                    weight,
-                    hours,
-                    minutes,
-                    quantity,
-                    modeling_complexity: complexity
-                })
+                body: JSON.stringify(calcState) // Note: backend now scales mat/machine cost by qty internally? Actually, we should send qty, wait, prompt says: backend should scale. So let's add qty to payload.
             });
-
             const data = await res.json();
             if (res.ok) {
-                currentCalcResult = data;
-                document.getElementById('res-total').textContent = data.total_price.toFixed(2);
-                document.getElementById('res-client-print').textContent = data.client_print_price.toFixed(2);
-                document.getElementById('res-self').textContent = data.self_cost.toFixed(2);
-                document.getElementById('res-markup').textContent = data.markup_cost.toFixed(2);
-                document.getElementById('res-failure').textContent = data.failure_cost.toFixed(2);
-                document.getElementById('res-mat').textContent = data.material_cost.toFixed(2);
-                document.getElementById('res-elec').textContent = data.electricity_cost.toFixed(2);
-                document.getElementById('res-amort').textContent = data.amortization_cost.toFixed(2);
-                document.getElementById('res-mod').textContent = data.modeling_cost.toFixed(2);
-                document.getElementById('res-tax').textContent = data.tax_cost.toFixed(2);
-            } else {
-                alert('Ошибка: ' + data.error);
+                backendCalcCache = data;
+                renderUI();
             }
         } catch (error) {
-            console.error('Error calculating cost:', error);
+            console.error('Error calculating:', error);
         }
     }
 
-    async function createOrderFromCalc() {
-        if (!currentCalcResult) {
-            alert('Сначала рассчитайте стоимость!');
+    function simulatePrice() {
+        calcState.simulatedPriceOffset = parseInt(document.getElementById('calc-whatif').value || 0);
+        renderUI();
+    }
+
+    function renderUI() {
+        if (!backendCalcCache) return;
+
+        const data = backendCalcCache;
+        let finalPrice = data.final_client_price;
+
+        // Apply What-if offset locally
+        if (calcState.simulatedPriceOffset !== 0) {
+            finalPrice = finalPrice * (1 + (calcState.simulatedPriceOffset / 100.0));
+        }
+
+        // Local profit recalc to avoid spamming backend on slider move
+        // Net_Profit = Final_Client_Price - TOTAL_SELF_COST - (Final_Client_Price * acquiring) - (Final_Client_Price * tax)
+        let acquiring = 0;
+        let taxRate = 0;
+        if (data.final_client_price > 0) {
+            acquiring = calcState.acquiring_applied ? data.acquiring_cost / data.final_client_price : 0;
+            taxRate = data.tax_cost / data.final_client_price;
+        }
+        const newTaxAndAcq = finalPrice * (acquiring + taxRate);
+        const newNetProfit = finalPrice - data.total_self_cost - newTaxAndAcq;
+        const newMargin = finalPrice > 0 ? (newNetProfit / finalPrice) * 100 : 0;
+
+        document.getElementById('res-self').textContent = data.total_self_cost.toFixed(2);
+        document.getElementById('res-fees').textContent = newTaxAndAcq.toFixed(2);
+        document.getElementById('res-client').textContent = finalPrice.toFixed(2);
+        document.getElementById('res-profit').textContent = newNetProfit.toFixed(2);
+        document.getElementById('res-margin').textContent = newMargin.toFixed(2);
+    }
+
+    async function createOrder() {
+        if (!backendCalcCache) {
+            alert('Рассчитайте стоимость!');
             return;
         }
 
-        const name = document.getElementById('order-name').value;
-        const desc = document.getElementById('order-desc').value;
-        const material_id = document.getElementById('calc-material').value;
-        const printer_id = document.getElementById('calc-printer').value;
-        const weight_used = document.getElementById('calc-weight').value;
-        const quantity = document.getElementById('calc-quantity').value;
-        const hours = parseFloat(document.getElementById('calc-hours').value || 0);
-        const minutes = parseFloat(document.getElementById('calc-minutes').value || 0);
-        const total_hours = hours + (minutes / 60.0);
-        const fileInput = document.getElementById('order-file');
-
-        if (!name) {
-            alert('Введите название заказа.');
-            return;
-        }
+        const name = document.getElementById('calc-project-name').value || 'Заказ';
+        const client_id = document.getElementById('calc-client').value;
+        const fileInput = document.getElementById('calc-file');
 
         const formData = new FormData();
         formData.append('name', name);
-        formData.append('description', desc);
         formData.append('status', 'Согласование');
-        formData.append('price', currentCalcResult.total_price);
-        formData.append('cost', currentCalcResult.self_cost);
-        formData.append('material_id', material_id);
-        formData.append('weight_used', weight_used);
-        formData.append('printer_id', printer_id);
-        formData.append('print_hours', total_hours);
-        formData.append('quantity', quantity);
 
-        const client_id = document.getElementById('order-client').value;
-        if (client_id) {
-            formData.append('client_id', client_id);
-            if (client_id === 'new') {
-                formData.append('new_client_name', document.getElementById('new-cli-name').value);
-                formData.append('new_client_phone', document.getElementById('new-cli-phone').value);
-                formData.append('new_client_email', document.getElementById('new-cli-email').value);
-                formData.append('new_client_inn', document.getElementById('new-cli-inn').value);
-                formData.append('new_client_address', document.getElementById('new-cli-address').value);
-                formData.append('new_client_notes', document.getElementById('new-cli-notes').value);
-            }
-        }
+        // Determine current price from UI considering what-if
+        let currentPriceStr = document.getElementById('res-client').textContent;
+        formData.append('price', parseFloat(currentPriceStr));
+        formData.append('cost', backendCalcCache.total_self_cost);
+
+        formData.append('printer_id', calcState.printer_id || '');
+        formData.append('print_hours', calcState.print_time_hours);
+        formData.append('quantity', calcState.qty);
+        formData.append('client_id', client_id);
+
+        // Serialize items
+        formData.append('items', JSON.stringify(calcState.items));
 
         if (fileInput.files.length > 0) {
             formData.append('file', fileInput.files[0]);
@@ -536,24 +642,30 @@
                 method: 'POST',
                 body: formData
             });
-
             if (res.ok) {
                 alert('Заказ успешно создан!');
-                document.getElementById('order-name').value = '';
-                document.getElementById('order-desc').value = '';
-                fileInput.value = '';
-                document.getElementById('order-client').value = '';
-                toggleNewClientFields();
-                loadOrders(); // Refresh kanban
-                loadSelects(); // Refresh clients dropdown
-                // Switch to kanban tab
-                const triggerEl = document.querySelector('#kanban-tab');
-                bootstrap.Tab.getInstance(triggerEl).show();
+                loadOrders();
+                bootstrap.Tab.getInstance(document.querySelector('#kanban-tab')).show();
             }
         } catch (error) {
             console.error('Error creating order:', error);
         }
     }
+
+    async function saveDraft() {
+        const name = document.getElementById('calc-project-name').value || 'Черновик';
+        try {
+            const res = await fetch('/api/drafts', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: name, payload: calcState})
+            });
+            if (res.ok) alert('Черновик сохранен!');
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
 
     async function loadOrders() {
         try {
@@ -608,10 +720,24 @@
 
             let fileLink = '';
             if (order.file_path) {
-                fileLink = `<a href="/uploads/${order.file_path}" target="_blank" class="btn btn-sm btn-outline-secondary w-100 mb-2">💾 Скачать файл</a>`;
+                fileLink = `<a href="/uploads/${order.file_path}" target="_blank" title="Скачать файл">💾</a>`;
             }
 
             let clientLabel = order.client_name ? `<span class="badge bg-primary mb-2">${order.client_name}</span>` : '';
+
+            let docsLnk = `
+                <div class="btn-group w-100 mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        Документы
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="window.open('/invoice/${order.id}?type=schet', '_blank')">Счет</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="window.open('/invoice/${order.id}?type=contract', '_blank')">Счет-договор</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="window.open('/waybill/${order.id}', '_blank')">Накладная</a></li>
+                    </ul>
+                </div>
+            `;
 
             card.innerHTML = `
                 <h5>Заказ №${order.order_number}</h5>
@@ -634,20 +760,8 @@
                         <option value="Архив" ${order.status === 'Архив' ? 'selected' : ''}>В Архив</option>
                     </select>
                 </div>
-                <div class="d-flex mt-2 gap-2">
-                    <div class="dropdown w-50">
-                        <button class="btn btn-sm btn-info w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Документы
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="window.open('/invoice/${order.id}?type=schet', '_blank')">Счет на оплату</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="window.open('/invoice/${order.id}?type=contract', '_blank')">Счет-договор</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="window.open('/waybill/${order.id}', '_blank')">Товарная накладная</a></li>
-                        </ul>
-                    </div>
-                    <button class="btn btn-sm btn-danger w-50" onclick="deleteOrder(${order.id})">Удалить</button>
-                </div>
+                ${docsLnk}
+                <button class="btn btn-sm btn-danger w-100 mt-2" onclick="deleteOrder(${order.id})">Удалить</button>
             `;
             const col = document.getElementById(`col-${order.status}`);
             if (col) {
@@ -664,8 +778,7 @@
                 body: JSON.stringify({ status: newStatus })
             });
             if (res.ok) {
-                loadOrders(); // Reload orders to update UI and potentially materials if status changed to "Готов"
-                // Trigger a reload of materials table in case status was set to "Готов"
+                loadOrders();
                 loadMaterialsTable();
             }
         } catch (error) {
@@ -768,35 +881,43 @@
     // --- Materials Logic ---
     async function loadMaterialsTable() {
         try {
-            const res = await fetch('/api/materials');
+            // Also load categories for the select
+            const catRes = await fetch('/api/categories');
+            const categories = await catRes.json();
+            const catSelect = document.getElementById('inv-category');
+            catSelect.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+            const res = await fetch('/api/inventory');
             const data = await res.json();
-            const tbody = document.getElementById('materials-table-body');
-            tbody.innerHTML = data.map(m => `
+            const tbody = document.getElementById('inventory-table-body');
+            tbody.innerHTML = data.map(i => `
                 <tr>
-                    <td>${m.name}</td>
-                    <td>${m.type}</td>
-                    <td>${m.weight_volume}</td>
-                    <td>${m.price}</td>
-                    <td>${m.stock}</td>
+                    <td>${i.type}</td>
+                    <td>${i.name}</td>
+                    <td>${i.unit_type}</td>
+                    <td>${i.unit_total}</td>
+                    <td>${i.price}</td>
+                    <td>${i.stock_current}</td>
                     <td>
-                        <button class="btn btn-sm btn-danger" onclick="deleteMaterial(${m.id})">Удалить</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteInventory(${i.id})">Удалить</button>
                     </td>
                 </tr>
             `).join('');
-            materialsList = data; // Keep lists in sync
+            inventoryList = data;
         } catch(e) { console.error(e); }
     }
 
-    async function addMaterial() {
+    async function addInventory() {
         const payload = {
-            name: document.getElementById('mat-name').value,
-            type: document.getElementById('mat-type').value,
-            weight_volume: document.getElementById('mat-wv').value,
-            price: document.getElementById('mat-price').value,
-            stock: document.getElementById('mat-stock').value
+            category_id: document.getElementById('inv-category').value,
+            name: document.getElementById('inv-name').value,
+            unit_type: document.getElementById('inv-unit').value,
+            unit_total: document.getElementById('inv-unit-total').value,
+            price: document.getElementById('inv-price').value,
+            stock_current: document.getElementById('inv-stock').value
         };
         try {
-            await fetch('/api/materials', {
+            await fetch('/api/inventory', {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify(payload)
@@ -806,9 +927,9 @@
         } catch(e) { console.error(e); }
     }
 
-    async function deleteMaterial(id) {
-        if(confirm('Удалить материал?')) {
-            await fetch(`/api/materials/${id}`, { method: 'DELETE' });
+    async function deleteInventory(id) {
+        if(confirm('Удалить ТМЦ?')) {
+            await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
             loadMaterialsTable();
         }
     }
