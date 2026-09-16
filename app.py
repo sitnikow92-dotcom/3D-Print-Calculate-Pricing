@@ -245,6 +245,34 @@ def add_client():
     db.session.commit()
     return jsonify(new_client.to_dict()), 201
 
+@app.route('/api/clients/<int:id>', methods=['PUT'])
+def edit_client(id):
+    client = Client.query.get_or_404(id)
+    data = request.json
+    if 'name' in data:
+        client.name = data['name']
+    if 'phone' in data:
+        client.phone = data['phone']
+    if 'email' in data:
+        client.email = data['email']
+    if 'inn' in data:
+        client.inn = data['inn']
+    if 'address' in data:
+        client.address = data['address']
+    if 'notes' in data:
+        client.notes = data['notes']
+
+    db.session.commit()
+    return jsonify(client.to_dict())
+
+@app.route('/api/clients/<int:id>', methods=['DELETE'])
+def delete_client(id):
+    client = Client.query.get_or_404(id)
+    db.session.delete(client)
+    db.session.commit()
+    return '', 204
+
+
 @app.route('/api/orders', methods=['POST'])
 def add_order():
     data = request.form
@@ -357,6 +385,17 @@ def update_order_status(id):
 def get_categories():
     categories = Category.query.all()
     return jsonify([c.to_dict() for c in categories])
+
+@app.route('/api/categories', methods=['POST'])
+def add_category():
+    data = request.json
+    new_cat = Category(
+        name=data['name'],
+        type=data['type']
+    )
+    db.session.add(new_cat)
+    db.session.commit()
+    return jsonify(new_cat.to_dict()), 201
 
 @app.route('/api/inventory', methods=['GET'])
 def get_inventory():

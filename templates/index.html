@@ -104,13 +104,46 @@
                 </div>
                 <div class="col-md-8">
                     <div class="card" id="client-details-card" style="display: none;">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0" id="detail-cli-name">Имя клиента</h5>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" id="btn-edit-client">Редактировать</button>
+                                <button class="btn btn-sm btn-outline-danger" id="btn-delete-client">Удалить</button>
+                            </div>
                         </div>
                         <div class="card-body">
-                            <p><strong>Телефон:</strong> <span id="detail-cli-phone"></span></p>
-                            <p><strong>Email:</strong> <span id="detail-cli-email"></span></p>
-                            <p><strong>Заметки:</strong> <span id="detail-cli-notes"></span></p>
+                            <div id="client-info-display">
+                                <p><strong>Телефон:</strong> <span id="detail-cli-phone"></span></p>
+                                <p><strong>Email:</strong> <span id="detail-cli-email"></span></p>
+                                <p><strong>Заметки:</strong> <span id="detail-cli-notes"></span></p>
+                            </div>
+
+                            <form id="client-edit-form" style="display:none;" class="row g-3 mb-3">
+                                <input type="hidden" id="edit-cli-id">
+                                <div class="col-12">
+                                    <input type="text" class="form-control" id="edit-cli-name" required>
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control" id="edit-cli-phone" placeholder="Телефон">
+                                </div>
+                                <div class="col-6">
+                                    <input type="email" class="form-control" id="edit-cli-email" placeholder="Email">
+                                </div>
+                                <div class="col-12">
+                                    <input type="text" class="form-control" id="edit-cli-inn" placeholder="ИНН">
+                                </div>
+                                <div class="col-12">
+                                    <input type="text" class="form-control" id="edit-cli-address" placeholder="Адрес">
+                                </div>
+                                <div class="col-12">
+                                    <textarea class="form-control" id="edit-cli-notes" placeholder="Заметки"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-success" onclick="saveClientEdit()">Сохранить</button>
+                                    <button type="button" class="btn btn-secondary" onclick="cancelClientEdit()">Отмена</button>
+                                </div>
+                            </form>
+
                             <hr>
                             <h6>Архив заказов</h6>
                             <table class="table table-striped table-sm mt-3">
@@ -136,124 +169,108 @@
             <div class="row position-relative">
                 <!-- Controls (Left) -->
                 <div class="col-md-7 mb-5">
-                    <div class="accordion" id="calcAccordion">
-                        <!-- Step 1: Technology & Model -->
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#acc-tech" aria-expanded="true">
-                                    1. Технология и Параметры печати
-                                </button>
-                            </h2>
-                            <div id="acc-tech" class="accordion-collapse collapse show" data-bs-parent="#calcAccordion">
-                                <div class="accordion-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">Принтер</label>
-                                        <select class="form-select" id="calc-printer" onchange="updateState()"></select>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-6 mb-3">
-                                            <label class="form-label">Время печати (ч)</label>
-                                            <input type="number" class="form-control" id="calc-hours" value="0" min="0" onchange="updateState()">
-                                        </div>
-                                        <div class="col-6 mb-3">
-                                            <label class="form-label">Тираж (шт)</label>
-                                            <input type="number" class="form-control" id="calc-qty" value="1" min="1" onchange="updateState()">
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Услуги моделирования (₽)</label>
-                                        <input type="number" class="form-control" id="calc-modeling" value="0" min="0" onchange="updateState()">
-                                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <strong>1. Технология и Параметры печати</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Принтер</label>
+                                <select class="form-select" id="calc-printer" onchange="updateState()"></select>
+                            </div>
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label">Время печати (ч)</label>
+                                    <input type="number" class="form-control" id="calc-hours" value="0" min="0" onchange="updateState()">
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label">Тираж (шт)</label>
+                                    <input type="number" class="form-control" id="calc-qty" value="1" min="1" onchange="updateState()">
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Step 2: Consumables & Work -->
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-mats">
-                                    2. Материалы и Работа
-                                </button>
-                            </h2>
-                            <div id="acc-mats" class="accordion-collapse collapse" data-bs-parent="#calcAccordion">
-                                <div class="accordion-body">
-                                    <div id="materials-container">
-                                        <!-- Dynamic materials list added by JS -->
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary mt-2" onclick="addMaterialField()">+ Добавить материал/упаковку</button>
-                                    <hr>
-                                    <div class="mb-3">
-                                        <label class="form-label">Время работы оператора (ч)</label>
-                                        <input type="number" class="form-control" id="calc-operator-hours" value="0.5" step="0.1" min="0" onchange="updateState()">
-                                    </div>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label">Услуги моделирования (₽)</label>
+                                <input type="number" class="form-control" id="calc-modeling" value="0" min="0" onchange="updateState()">
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Step 3: Pricing Strategy -->
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#acc-pricing">
-                                    3. Продажа и Скидки
-                                </button>
-                            </h2>
-                            <div id="acc-pricing" class="accordion-collapse collapse" data-bs-parent="#calcAccordion">
-                                <div class="accordion-body">
-                                    <div class="row mb-3">
-                                        <div class="col-6">
-                                            <label class="form-label">Стратегия ценообразования</label>
-                                            <select class="form-select" id="calc-strategy" onchange="updateState()">
-                                                <option value="markup">Наценка (%)</option>
-                                                <option value="target_profit">Целевая прибыль (₽)</option>
-                                                <option value="fixed_price">Фиксированная цена (₽)</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label">Значение стратегии</label>
-                                            <input type="number" class="form-control" id="calc-strategy-val" value="100" onchange="updateState()">
-                                        </div>
-                                    </div>
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <strong>2. Материалы и Работа</strong>
+                        </div>
+                        <div class="card-body">
+                            <div id="materials-container">
+                                <!-- Dynamic materials list added by JS -->
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary mt-2" onclick="addMaterialField()">+ Добавить материал/упаковку</button>
+                            <hr>
+                            <div class="mb-3">
+                                <label class="form-label">Время работы оператора (ч)</label>
+                                <input type="number" class="form-control" id="calc-operator-hours" value="0.5" step="0.1" min="0" onchange="updateState()">
+                            </div>
+                        </div>
+                    </div>
 
-                                    <div class="row mb-3">
-                                        <div class="col-6">
-                                            <label class="form-label">Тип скидки</label>
-                                            <select class="form-select" id="calc-discount-type" onchange="updateState()">
-                                                <option value="percent">Процент (%)</option>
-                                                <option value="absolute">Сумма (₽)</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label">Размер скидки</label>
-                                            <input type="number" class="form-control" id="calc-discount-val" value="0" min="0" onchange="updateState()">
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">What-If Аналитика (Симуляция цены)</label>
-                                        <input type="range" class="form-range" id="calc-whatif" min="-50" max="150" value="0" oninput="document.getElementById('whatif-val').textContent = this.value; simulatePrice()">
-                                        <div class="text-center small">Изменение от базовой цены: <span id="whatif-val">0</span>%</div>
-                                    </div>
-
-                                    <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" id="calc-acquiring" onchange="updateState()">
-                                        <label class="form-check-label">Учитывать эквайринг</label>
-                                    </div>
-
-                                    <hr>
-                                    <h6>Создание заказа / Черновик</h6>
-                                    <div class="mb-3">
-                                        <label class="form-label">Название проекта</label>
-                                        <input type="text" class="form-control" id="calc-project-name" placeholder="Деталь для станка">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Клиент</label>
-                                        <select class="form-select" id="calc-client"></select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Файл модели (опционально)</label>
-                                        <input type="file" class="form-control" id="calc-file" accept=".stl,.step,.stp,.obj,.zip">
-                                    </div>
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <strong>3. Продажа и Скидки</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">Стратегия ценообразования</label>
+                                    <select class="form-select" id="calc-strategy" onchange="updateState()">
+                                        <option value="markup">Наценка (%)</option>
+                                        <option value="target_profit">Целевая прибыль (₽)</option>
+                                        <option value="fixed_price">Фиксированная цена (₽)</option>
+                                    </select>
                                 </div>
+                                <div class="col-6">
+                                    <label class="form-label">Значение стратегии</label>
+                                    <input type="number" class="form-control" id="calc-strategy-val" value="100" onchange="updateState()">
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">Тип скидки</label>
+                                    <select class="form-select" id="calc-discount-type" onchange="updateState()">
+                                        <option value="percent">Процент (%)</option>
+                                        <option value="absolute">Сумма (₽)</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Размер скидки</label>
+                                    <input type="number" class="form-control" id="calc-discount-val" value="0" min="0" onchange="updateState()">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">What-If Аналитика (Симуляция цены)</label>
+                                <input type="range" class="form-range" id="calc-whatif" min="-50" max="150" value="0" oninput="document.getElementById('whatif-val').textContent = this.value; simulatePrice()">
+                                <div class="text-center small">Изменение от базовой цены: <span id="whatif-val">0</span>%</div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="calc-acquiring" onchange="updateState()">
+                                <label class="form-check-label">Учитывать эквайринг</label>
+                            </div>
+
+                            <hr>
+                            <h6>Создание заказа / Черновик</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Название проекта</label>
+                                <input type="text" class="form-control" id="calc-project-name" placeholder="Деталь для станка">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Клиент</label>
+                                <select class="form-select" id="calc-client"></select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Файл модели (опционально)</label>
+                                <input type="file" class="form-control" id="calc-file" accept=".stl,.step,.stp,.obj,.zip">
                             </div>
                         </div>
                     </div>
@@ -300,35 +317,63 @@
 
 
         <div class="tab-pane fade" id="materials" role="tabpanel" aria-labelledby="materials-tab">
-            <div class="card mb-4">
-                <div class="card-header">Добавить ТМЦ (Материалы, Упаковка и т.д.)</div>
-                <div class="card-body">
-                    <form id="add-material-form" class="row g-3">
-                        <div class="col-md-2">
-                            <select class="form-select" id="inv-category" required></select>
+            <div class="row">
+                <div class="col-md-12 mb-4">
+                    <div class="card">
+                        <div class="card-header">Категории</div>
+                        <div class="card-body">
+                            <form id="add-category-form" class="row g-3 align-items-center mb-3">
+                                <div class="col-auto">
+                                    <input type="text" class="form-control" id="cat-name" placeholder="Название категории" required>
+                                </div>
+                                <div class="col-auto">
+                                    <select class="form-select" id="cat-type" required>
+                                        <option value="resin">Фотополимер</option>
+                                        <option value="filament">Пластик</option>
+                                        <option value="consumables">Расходники</option>
+                                        <option value="packaging">Упаковка</option>
+                                        <option value="services">Услуги</option>
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-primary" onclick="addCategory()">Добавить категорию</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="col-md-3">
-                            <input type="text" class="form-control" id="inv-name" placeholder="Название" required>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="card mb-4">
+                        <div class="card-header">Добавить ТМЦ (Материалы, Упаковка и т.д.)</div>
+                        <div class="card-body">
+                            <form id="add-material-form" class="row g-3">
+                                <div class="col-md-2">
+                                    <select class="form-select" id="inv-category" required></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" id="inv-name" placeholder="Название" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <select class="form-select" id="inv-unit" required>
+                                        <option value="weight">Вес (г/мл)</option>
+                                        <option value="piece">Шт</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" class="form-control" id="inv-unit-total" placeholder="Итого в ед." required step="0.1">
+                                </div>
+                                <div class="col-md-1">
+                                    <input type="number" class="form-control" id="inv-price" placeholder="Цена (₽)" required step="0.1">
+                                </div>
+                                <div class="col-md-1">
+                                    <input type="number" class="form-control" id="inv-stock" placeholder="Остаток" required step="0.1">
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-primary w-100" onclick="addInventory()">+</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="col-md-2">
-                            <select class="form-select" id="inv-unit" required>
-                                <option value="weight">Вес (г/мл)</option>
-                                <option value="piece">Шт</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <input type="number" class="form-control" id="inv-unit-total" placeholder="Итого в ед." required step="0.1">
-                        </div>
-                        <div class="col-md-1">
-                            <input type="number" class="form-control" id="inv-price" placeholder="Цена (₽)" required step="0.1">
-                        </div>
-                        <div class="col-md-1">
-                            <input type="number" class="form-control" id="inv-stock" placeholder="Остаток" required step="0.1">
-                        </div>
-                        <div class="col-md-1">
-                            <button type="button" class="btn btn-primary w-100" onclick="addInventory()">+</button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
 
@@ -348,91 +393,108 @@
             </table>
         </div>
         <div class="tab-pane fade" id="printers" role="tabpanel" aria-labelledby="printers-tab">
-            <div class="card mb-4">
-                <div class="card-header">Добавить принтер</div>
-                <div class="card-body">
-                    <form id="add-printer-form" class="row g-3">
-                        <div class="col-md-4">
-                            <input type="text" class="form-control" id="prin-name" placeholder="Название" required>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-header">Добавить принтер</div>
+                        <div class="card-body">
+                            <form id="add-printer-form" class="row g-3">
+                                <div class="col-12">
+                                    <input type="text" class="form-control" id="prin-name" placeholder="Название" required>
+                                </div>
+                                <div class="col-12">
+                                    <input type="number" class="form-control" id="prin-power" placeholder="Мощность (Вт)" required step="0.1">
+                                </div>
+                                <div class="col-12">
+                                    <input type="number" class="form-control" id="prin-cost" placeholder="Стоимость (₽)" required step="0.1">
+                                </div>
+                                <div class="col-12">
+                                    <input type="number" class="form-control" id="prin-res" placeholder="Ресурс (часы)" required step="0.1">
+                                </div>
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-primary w-100" onclick="addPrinter()">Добавить</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="col-md-2">
-                            <input type="number" class="form-control" id="prin-power" placeholder="Мощность (Вт)" required step="0.1">
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">Список принтеров</div>
+                        <div class="card-body p-0">
+                            <table class="table table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Название</th>
+                                        <th>Мощность (Вт)</th>
+                                        <th>Стоимость (₽)</th>
+                                        <th>Ресурс (ч)</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="printers-table-body"></tbody>
+                            </table>
                         </div>
-                        <div class="col-md-3">
-                            <input type="number" class="form-control" id="prin-cost" placeholder="Стоимость (₽)" required step="0.1">
-                        </div>
-                        <div class="col-md-2">
-                            <input type="number" class="form-control" id="prin-res" placeholder="Ресурс (часы)" required step="0.1">
-                        </div>
-                        <div class="col-md-1">
-                            <button type="button" class="btn btn-primary w-100" onclick="addPrinter()">+</button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
-
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Название</th>
-                        <th>Мощность (Вт)</th>
-                        <th>Стоимость (₽)</th>
-                        <th>Ресурс (ч)</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody id="printers-table-body"></tbody>
-            </table>
         </div>
         <div class="tab-pane fade" id="settings" role="tabpanel" aria-labelledby="settings-tab">
-            <div class="card" style="max-width: 400px;">
-                <div class="card-header">Общие настройки</div>
-                <div class="card-body">
-                    <form id="settings-form">
-                        <div class="mb-3">
-                            <label class="form-label">Тариф электроэнергии (₽/кВт*ч)</label>
-                            <input type="number" class="form-control" id="set-elec" step="0.1" required>
+            <form id="settings-form" class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">Ценообразование и налоги</div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Тариф электроэнергии (₽/кВт*ч)</label>
+                                <input type="number" class="form-control" id="set-elec" step="0.1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Наценка на печать (%)</label>
+                                <input type="number" class="form-control" id="set-markup" step="0.1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Процент на брак (%)</label>
+                                <input type="number" class="form-control" id="set-failure" step="0.1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Налог самозанятого (%)</label>
+                                <input type="number" class="form-control" id="set-tax" step="0.1" required>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Наценка на печать (%)</label>
-                            <input type="number" class="form-control" id="set-markup" step="0.1" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Процент на брак (%)</label>
-                            <input type="number" class="form-control" id="set-failure" step="0.1" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Налог самозанятого (%)</label>
-                            <input type="number" class="form-control" id="set-tax" step="0.1" required>
-                        </div>
-
-                        <hr>
-                        <h6>Реквизиты для счета</h6>
-                        <div class="mb-3">
-                            <label class="form-label">ФИО / Название</label>
-                            <input type="text" class="form-control" id="set-seller-name" placeholder="Иванов И. И.">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">ИНН</label>
-                            <input type="text" class="form-control" id="set-seller-inn">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Банк</label>
-                            <input type="text" class="form-control" id="set-seller-bank">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Расчетный счет</label>
-                            <input type="text" class="form-control" id="set-seller-account">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">БИК</label>
-                            <input type="text" class="form-control" id="set-seller-bik">
-                        </div>
-
-                        <button type="button" class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
-                    </form>
+                    </div>
                 </div>
-            </div>
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">Реквизиты для счета</div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">ФИО / Название</label>
+                                <input type="text" class="form-control" id="set-seller-name" placeholder="Иванов И. И.">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">ИНН</label>
+                                <input type="text" class="form-control" id="set-seller-inn">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Банк</label>
+                                <input type="text" class="form-control" id="set-seller-bank">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Расчетный счет</label>
+                                <input type="text" class="form-control" id="set-seller-account">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">БИК</label>
+                                <input type="text" class="form-control" id="set-seller-bik">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <button type="button" class="btn btn-primary" onclick="saveSettings()">Сохранить настройки</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -835,15 +897,34 @@
         if (client.address) detailsHtml += `<p><strong>Адрес:</strong> ${client.address}</p>`;
         detailsHtml += `<p><strong>Заметки:</strong> ${client.notes || '-'}</p>`;
 
-        // Update client info section
-        const cardBody = document.querySelector('#client-details-card .card-body');
-        // We replace the initial paragraphs with our dynamically built string
-        // but preserve the hr and table
-        const hrIndex = cardBody.innerHTML.indexOf('<hr>');
-        if (hrIndex !== -1) {
-             const lowerPart = cardBody.innerHTML.substring(hrIndex);
-             cardBody.innerHTML = detailsHtml + lowerPart;
-        }
+        document.getElementById('client-info-display').innerHTML = detailsHtml;
+
+        document.getElementById('btn-edit-client').onclick = () => {
+            document.getElementById('client-info-display').style.display = 'none';
+            document.getElementById('client-edit-form').style.display = 'flex';
+
+            document.getElementById('edit-cli-id').value = client.id;
+            document.getElementById('edit-cli-name').value = client.name;
+            document.getElementById('edit-cli-phone').value = client.phone || '';
+            document.getElementById('edit-cli-email').value = client.email || '';
+            document.getElementById('edit-cli-inn').value = client.inn || '';
+            document.getElementById('edit-cli-address').value = client.address || '';
+            document.getElementById('edit-cli-notes').value = client.notes || '';
+        };
+
+        document.getElementById('btn-delete-client').onclick = async () => {
+            if (confirm('Удалить клиента? Это не удалит его заказы, но они потеряют связь с клиентом.')) {
+                try {
+                    await fetch(`/api/clients/${client.id}`, { method: 'DELETE' });
+                    document.getElementById('client-details-card').style.display = 'none';
+                    loadClientsList();
+                    loadSelects();
+                } catch(e) { console.error(e); }
+            }
+        };
+
+        // Make sure form is hidden initially when switching clients
+        cancelClientEdit();
 
         // Filter orders for this client
         const cOrders = allOrdersList.filter(o => o.client_id === client.id);
@@ -878,7 +959,57 @@
         document.getElementById('client-details-card').style.display = 'block';
     }
 
+    function cancelClientEdit() {
+        document.getElementById('client-edit-form').style.display = 'none';
+        document.getElementById('client-info-display').style.display = 'block';
+    }
+
+    async function saveClientEdit() {
+        const id = document.getElementById('edit-cli-id').value;
+        const payload = {
+            name: document.getElementById('edit-cli-name').value,
+            phone: document.getElementById('edit-cli-phone').value,
+            email: document.getElementById('edit-cli-email').value,
+            inn: document.getElementById('edit-cli-inn').value,
+            address: document.getElementById('edit-cli-address').value,
+            notes: document.getElementById('edit-cli-notes').value
+        };
+
+        try {
+            const res = await fetch(`/api/clients/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                await loadClientsList();
+                showClientDetails(parseInt(id));
+                loadSelects();
+            }
+        } catch(e) { console.error(e); }
+    }
+
+
     // --- Materials Logic ---
+    async function addCategory() {
+        const payload = {
+            name: document.getElementById('cat-name').value,
+            type: document.getElementById('cat-type').value
+        };
+        try {
+            const res = await fetch('/api/categories', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                document.getElementById('add-category-form').reset();
+                loadMaterialsTable(); // reload categories
+                loadSelects(); // reload selects across tabs
+            }
+        } catch(e) { console.error(e); }
+    }
+
     async function loadMaterialsTable() {
         try {
             // Also load categories for the select
