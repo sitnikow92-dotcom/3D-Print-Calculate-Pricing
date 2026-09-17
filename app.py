@@ -8,7 +8,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
-import google.generativeai as genai
+from google import genai
 
 if getattr(sys, 'frozen', False):
     template_folder = os.path.join(sys._MEIPASS, 'templates')
@@ -697,8 +697,7 @@ def ai_chat():
     if not settings or not settings.gemini_api_key:
         return jsonify({'error': 'Gemini API key is not configured in settings.'}), 400
 
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    client = genai.Client(api_key=settings.gemini_api_key)
 
     data = request.json
     user_message = data.get('message', '')
@@ -708,7 +707,10 @@ def ai_chat():
     full_prompt = f"{system_prompt}\nContext (current page data):\n{context}\n\nUser: {user_message}"
 
     try:
-        response = model.generate_content(full_prompt)
+        response = client.models.generate_content(
+            model='gemini-1.5-flash',
+            contents=full_prompt
+        )
         return jsonify({'response': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
