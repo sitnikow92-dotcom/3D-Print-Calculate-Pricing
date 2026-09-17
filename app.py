@@ -569,15 +569,23 @@ def get_settings():
     settings = Settings.query.first()
     return jsonify(settings.to_dict())
 
+def safe_float(value, default=0.0):
+    if value is None or str(value).strip() == '':
+        return default
+    try:
+        return float(str(value).replace(',', '.'))
+    except ValueError:
+        return default
+
 @app.route('/api/settings', methods=['POST'])
 def update_settings():
     data = request.json
     settings = Settings.query.first()
     if settings:
-        settings.electricity_rate = float(data.get('electricity_rate', settings.electricity_rate))
-        settings.markup_percent = float(data.get('markup_percent', settings.markup_percent))
-        settings.failure_percent = float(data.get('failure_percent', settings.failure_percent))
-        settings.tax_percent = float(data.get('tax_percent', settings.tax_percent))
+        settings.electricity_rate = safe_float(data.get('electricity_rate'), settings.electricity_rate)
+        settings.markup_percent = safe_float(data.get('markup_percent'), settings.markup_percent)
+        settings.failure_percent = safe_float(data.get('failure_percent'), settings.failure_percent)
+        settings.tax_percent = safe_float(data.get('tax_percent'), settings.tax_percent)
         settings.seller_name = data.get('seller_name', settings.seller_name)
         settings.seller_inn = data.get('seller_inn', settings.seller_inn)
         settings.seller_bank = data.get('seller_bank', settings.seller_bank)
@@ -708,12 +716,12 @@ def ai_chat():
 
     try:
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-1.5-flash-latest',
             contents=full_prompt
         )
         return jsonify({'response': response.text})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f"Ошибка API: {str(e)}"}), 500
 
 def open_browser():
     time.sleep(1)
