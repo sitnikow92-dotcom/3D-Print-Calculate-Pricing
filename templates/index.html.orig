@@ -12,31 +12,7 @@
         .kanban-column { min-width: 300px; background: #f8f9fa; border-radius: 5px; padding: 15px; }
         .kanban-card { background: white; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .kanban-column h4 { text-align: center; margin-bottom: 15px; font-size: 1.1rem; }
-        .fab-container {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 1000;
-        }
-        .fab-button {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background-color: #673ab7;
-            color: white;
-            font-size: 24px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            border: none;
-        }
-        #ai-chat-history { height: calc(100vh - 200px); overflow-y: auto; background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
-        .ai-message { background-color: #e3f2fd; padding: 10px; border-radius: 10px; margin-bottom: 10px; }
-        .user-message { background-color: #d1c4e9; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: right; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
@@ -648,11 +624,6 @@
                                 <label class="form-label">БИК</label>
                                 <input type="text" class="form-control" id="set-seller-bik">
                             </div>
-                            <hr>
-                            <div class="mb-3">
-                                <label class="form-label">Gemini API Key</label>
-                                <input type="password" class="form-control" id="set-gemini-key">
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -685,30 +656,6 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                 <button type="button" class="btn btn-primary" onclick="generateDocument()">Сгенерировать</button>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- AI Assistant FAB -->
-<div class="fab-container">
-    <button class="fab-button" type="button" data-bs-toggle="offcanvas" data-bs-target="#aiOffcanvas" aria-controls="aiOffcanvas">
-        ✨
-    </button>
-</div>
-
-<!-- AI Assistant Offcanvas -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="aiOffcanvas" aria-labelledby="aiOffcanvasLabel">
-    <div class="offcanvas-header bg-primary text-white">
-        <h5 class="offcanvas-title" id="aiOffcanvasLabel">✨ Gemini Assistant</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body d-flex flex-column">
-        <div id="ai-chat-history" class="flex-grow-1">
-            <div class="text-center text-muted mt-5" id="ai-welcome">Спросите меня о чем угодно!</div>
-        </div>
-        <div class="mt-auto">
-            <textarea id="ai-chat-input" class="form-control mb-2" rows="3" placeholder="Введите ваш вопрос..."></textarea>
-            <button class="btn btn-primary w-100" onclick="sendAiMessage()">Отправить</button>
         </div>
     </div>
 </div>
@@ -1431,7 +1378,6 @@
             document.getElementById('set-seller-bank').value = data.seller_bank || '';
             document.getElementById('set-seller-account').value = data.seller_account || '';
             document.getElementById('set-seller-bik').value = data.seller_bik || '';
-            document.getElementById('set-gemini-key').value = data.gemini_api_key || '';
         } catch(e) { console.error(e); }
     }
 
@@ -1450,8 +1396,7 @@
             seller_inn: document.getElementById('set-seller-inn').value,
             seller_bank: document.getElementById('set-seller-bank').value,
             seller_account: document.getElementById('set-seller-account').value,
-            seller_bik: document.getElementById('set-seller-bik').value,
-            gemini_api_key: document.getElementById('set-gemini-key').value
+            seller_bik: document.getElementById('set-seller-bik').value
         };
 
         try {
@@ -1474,69 +1419,6 @@
             } catch(e) {
                 console.error(e);
             }
-        }
-    }
-
-    // --- AI Assistant Logic ---
-    async function sendAiMessage() {
-        const inputEl = document.getElementById('ai-chat-input');
-        const historyEl = document.getElementById('ai-chat-history');
-        const welcomeMsg = document.getElementById('ai-welcome');
-
-        const message = inputEl.value.trim();
-        if (!message) return;
-
-        if (welcomeMsg) welcomeMsg.style.display = 'none';
-
-        // Add user message to UI
-        const userDiv = document.createElement('div');
-        userDiv.className = 'user-message';
-        userDiv.textContent = message;
-        historyEl.appendChild(userDiv);
-        historyEl.scrollTop = historyEl.scrollHeight;
-        inputEl.value = '';
-
-        // Add loading indicator
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'ai-message text-muted';
-        loadingDiv.textContent = 'Печатаю ответ... ⏳';
-        historyEl.appendChild(loadingDiv);
-        historyEl.scrollTop = historyEl.scrollHeight;
-
-        // Gather context (e.g., active tab)
-        const activeTab = document.querySelector('.nav-link.active').textContent;
-        let contextData = `Текущая вкладка: ${activeTab}. `;
-        if (activeTab === 'Создать заказ' && backendCalcCache) {
-             contextData += `Данные калькулятора: Себестоимость=${backendCalcCache.total_self_cost}, Итоговая цена=${backendCalcCache.final_client_price}. `;
-        }
-
-        try {
-            const res = await fetch('/api/ai/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: message, context: contextData })
-            });
-            const data = await res.json();
-
-            historyEl.removeChild(loadingDiv);
-
-            const aiDiv = document.createElement('div');
-            aiDiv.className = 'ai-message';
-            if (res.ok) {
-                aiDiv.innerHTML = marked.parse(data.response);
-            } else {
-                aiDiv.innerHTML = `<span class="text-danger">Ошибка: ${data.error || 'Неизвестная ошибка'}</span>`;
-            }
-            historyEl.appendChild(aiDiv);
-            historyEl.scrollTop = historyEl.scrollHeight;
-
-        } catch (e) {
-            console.error(e);
-            historyEl.removeChild(loadingDiv);
-            const errDiv = document.createElement('div');
-            errDiv.className = 'ai-message text-danger';
-            errDiv.textContent = 'Произошла ошибка при отправке запроса.';
-            historyEl.appendChild(errDiv);
         }
     }
 </script>

@@ -8,7 +8,6 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
-import google.generativeai as genai
 
 if getattr(sys, 'frozen', False):
     template_folder = os.path.join(sys._MEIPASS, 'templates')
@@ -583,7 +582,6 @@ def update_settings():
         settings.seller_bank = data.get('seller_bank', settings.seller_bank)
         settings.seller_account = data.get('seller_account', settings.seller_account)
         settings.seller_bik = data.get('seller_bik', settings.seller_bik)
-        settings.gemini_api_key = data.get('gemini_api_key', settings.gemini_api_key)
 
         db.session.commit()
         return jsonify(settings.to_dict())
@@ -688,30 +686,6 @@ def print_document(doc_id):
     # Route to the appropriate template based on doc_type
     template_name = f"documents/{doc.doc_type}.html"
     return render_template(template_name, doc=doc, snapshot=snapshot)
-
-# --- AI Assistant API ---
-
-@app.route('/api/ai/chat', methods=['POST'])
-def ai_chat():
-    settings = Settings.query.first()
-    if not settings or not settings.gemini_api_key:
-        return jsonify({'error': 'Gemini API key is not configured in settings.'}), 400
-
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-
-    data = request.json
-    user_message = data.get('message', '')
-    context = data.get('context', '')
-
-    system_prompt = "You are an expert assistant built into a 3D Printing CRM. Answer questions, help with calculations, and provide advice on 3D printing and CRM usage. "
-    full_prompt = f"{system_prompt}\nContext (current page data):\n{context}\n\nUser: {user_message}"
-
-    try:
-        response = model.generate_content(full_prompt)
-        return jsonify({'response': response.text})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 def open_browser():
     time.sleep(1)

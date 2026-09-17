@@ -1,0 +1,38 @@
+--- app.py
++++ app.py
+@@ -192,6 +192,7 @@
+     seller_bank = db.Column(db.String(200), nullable=True)
+     seller_account = db.Column(db.String(50), nullable=True)
+     seller_bik = db.Column(db.String(20), nullable=True)
++    gemini_api_key = db.Column(db.String(200), nullable=True)
+
+     def to_dict(self):
+         return {
+@@ -204,7 +205,8 @@
+             'seller_inn': self.seller_inn,
+             'seller_bank': self.seller_bank,
+             'seller_account': self.seller_account,
+-            'seller_bik': self.seller_bik
++            'seller_bik': self.seller_bik,
++            'gemini_api_key': self.gemini_api_key
+         }
+
+ @app.route('/')
+@@ -477,7 +479,8 @@
+             seller_inn=data.get('seller_inn', ''),
+             seller_bank=data.get('seller_bank', ''),
+             seller_account=data.get('seller_account', ''),
+-            seller_bik=data.get('seller_bik', '')
++            seller_bik=data.get('seller_bik', ''),
++            gemini_api_key=data.get('gemini_api_key', '')
+         )
+         db.session.add(settings)
+     else:
+@@ -490,6 +493,7 @@
+         settings.seller_bank = data.get('seller_bank', '')
+         settings.seller_account = data.get('seller_account', '')
+         settings.seller_bik = data.get('seller_bik', '')
++        settings.gemini_api_key = data.get('gemini_api_key', '')
+
+     db.session.commit()
+     return jsonify(settings.to_dict())

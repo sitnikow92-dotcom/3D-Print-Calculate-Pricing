@@ -104,3 +104,6 @@
 *   Проект работает локально без необходимости настройки сложного сервера.
 *   База данных (`database.db`) создается автоматически при первом запуске в виде обычного файла SQLite.
 *   Интерфейс представляет собой Single Page Application (SPA), поэтому переключение между вкладками происходит мгновенно без перезагрузки страницы.
+### Handling existing database files
+When upgrading to version with Gemini API Key support, a database migration is required.
+If you get `OperationalError: no such column: settings.gemini_api_key`, simply delete `database.db` and run the application again to create a new database with the updated schema.
