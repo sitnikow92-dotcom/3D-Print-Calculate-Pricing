@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ doc.doc_type | upper }} No {{ doc.doc_number }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #000;
+            background: #fff;
+        }
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #000;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .no-border, .no-border th, .no-border td {
+            border: none;
+        }
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 20px;">
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Распечатать / Сохранить в PDF</button>
+    </div>
+    {% block content %}{% endblock %}
+</body>
+</html>

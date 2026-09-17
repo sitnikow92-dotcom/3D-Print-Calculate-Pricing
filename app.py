@@ -6,6 +6,8 @@ import webbrowser
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+import json
 
 if getattr(sys, 'frozen', False):
     template_folder = os.path.join(sys._MEIPASS, 'templates')
@@ -85,6 +87,34 @@ class Client(db.Model):
             'email': self.email, 'inn': self.inn, 'address': self.address,
             'notes': self.notes
         }
+
+class Document(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    doc_type = db.Column(db.String(50), nullable=False) # 'kp', 'contract', 'receipt', 'invoice', 'waybill', 'act', 'upd'
+    doc_number = db.Column(db.String(100), nullable=False)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    amount = db.Column(db.Float, default=0.0)
+    snapshot = db.Column(db.Text, nullable=False) # JSON stored as string
+
+    client = db.relationship('Client', backref=db.backref('documents', lazy=True))
+    order = db.relationship('Order', backref=db.backref('documents', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'doc_type': self.doc_type,
+            'doc_number': self.doc_number,
+            'order_id': self.order_id,
+            'client_id': self.client_id,
+            'client_name': self.client.name if self.client else None,
+            'order_name': self.order.name if self.order else None,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,
+            'amount': self.amount,
+            'snapshot': json.loads(self.snapshot) if self.snapshot else {}
+        }
+
 
 class CalculationDraft(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -572,6 +602,88 @@ def get_waybill(id):
     from datetime import datetime
     now = datetime.now().strftime("%d.%m.%Y")
     return render_template('waybill.html', order=order, settings=settings, now=now)
+
+# --- Documents API ---
+
+@app.route('/api/documents', methods=['GET'])
+def get_documents():
+    query = Document.query
+
+    doc_type = request.args.get('type')
+    if doc_type:
+        query = query.filter_by(doc_type=doc_type)
+
+    client_id = request.args.get('client_id')
+    if client_id:
+        query = query.filter_by(client_id=int(client_id))
+
+    date_from = request.args.get('date_from')
+    if date_from:
+        try:
+            df = datetime.strptime(date_from, '%Y-%m-%d')
+            query = query.filter(Document.created_at >= df)
+        except ValueError:
+            pass
+
+    date_to = request.args.get('date_to')
+    if date_to:
+        try:
+            dt = datetime.strptime(date_to, '%Y-%m-%d')
+            dt = dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(Document.created_at <= dt)
+        except ValueError:
+            pass
+
+    docs = query.order_by(Document.created_at.desc()).all()
+    return jsonify([d.to_dict() for d in docs])
+
+@app.route('/api/documents/generate', methods=['POST'])
+def generate_document():
+    data = request.json
+    doc_type = data.get('doc_type')
+    order_id = data.get('order_id')
+
+    if not doc_type or not order_id:
+        return jsonify({'error': 'doc_type and order_id are required'}), 400
+
+    order = Order.query.get_or_404(order_id)
+    client = order.client
+
+    if not client:
+        return jsonify({'error': 'Order must have an associated client to generate documents'}), 400
+
+    # Create snapshot
+    snapshot = {
+        'order': order.to_dict(),
+        'client': client.to_dict(),
+        'settings': Settings.query.first().to_dict() if Settings.query.first() else {}
+    }
+
+    # Generate Doc Number (simple sequential based on count of this type)
+    prefix = doc_type.upper()[:3]
+    count = Document.query.filter_by(doc_type=doc_type).count() + 1
+    doc_number = f"{prefix}-{count:03d}"
+
+    new_doc = Document(
+        doc_type=doc_type,
+        doc_number=doc_number,
+        order_id=order.id,
+        client_id=client.id,
+        amount=order.price,
+        snapshot=json.dumps(snapshot)
+    )
+    db.session.add(new_doc)
+    db.session.commit()
+
+    return jsonify(new_doc.to_dict()), 201
+
+@app.route('/document/print/<int:doc_id>', methods=['GET'])
+def print_document(doc_id):
+    doc = Document.query.get_or_404(doc_id)
+    snapshot = json.loads(doc.snapshot)
+    # Route to the appropriate template based on doc_type
+    template_name = f"documents/{doc.doc_type}.html"
+    return render_template(template_name, doc=doc, snapshot=snapshot)
 
 def open_browser():
     time.sleep(1)

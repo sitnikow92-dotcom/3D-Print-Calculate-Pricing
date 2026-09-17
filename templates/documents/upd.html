@@ -1,0 +1,69 @@
+{% extends "documents/print_base.html" %}
+{% block content %}
+<div class="header">
+    <h2>ДОКУМЕНТ: {{ doc.doc_type | upper }} № {{ doc.doc_number }}</h2>
+    <p>от {{ doc.created_at.strftime('%d.%m.%Y') }}</p>
+</div>
+
+<table class="no-border">
+    <tr>
+        <td style="width: 50%;">
+            <strong>Исполнитель:</strong><br>
+            {{ snapshot.settings.seller_name or 'ИП / Самозанятый' }}<br>
+            ИНН: {{ snapshot.settings.seller_inn or '---' }}<br>
+            Банк: {{ snapshot.settings.seller_bank or '---' }}<br>
+            Р/С: {{ snapshot.settings.seller_account or '---' }}<br>
+            БИК: {{ snapshot.settings.seller_bik or '---' }}
+        </td>
+        <td style="width: 50%;">
+            <strong>Заказчик:</strong><br>
+            {{ snapshot.client.name }}<br>
+            ИНН: {{ snapshot.client.inn or '---' }}<br>
+            Адрес: {{ snapshot.client.address or '---' }}<br>
+            Телефон: {{ snapshot.client.phone or '---' }}
+        </td>
+    </tr>
+</table>
+
+<h3>Основание: Заказ № {{ snapshot.order.order_number }}</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>№</th>
+            <th>Наименование работ, услуг</th>
+            <th>Кол-во</th>
+            <th>Цена (руб.)</th>
+            <th>Сумма (руб.)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>1</td>
+            <td>{{ snapshot.order.name }}</td>
+            <td>{{ snapshot.order.quantity }}</td>
+            <td>{{ (doc.amount / snapshot.order.quantity) | round(2) }}</td>
+            <td>{{ doc.amount }}</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="text-right">
+    <strong>Итого к оплате: {{ doc.amount }} руб.</strong>
+    <p>Без налога (НДС)</p>
+</div>
+
+<br><br><br>
+<table class="no-border">
+    <tr>
+        <td>
+            <strong>Исполнитель:</strong><br><br>
+            ____________________ / ____________________ /
+        </td>
+        <td>
+            <strong>Заказчик:</strong><br><br>
+            ____________________ / ____________________ /
+        </td>
+    </tr>
+</table>
+{% endblock %}
